@@ -55,12 +55,44 @@ pub struct Recreation {
 
 #[derive(Component, Default)]
 pub struct Brain {
-    last_wander_time: f32,
+    state: BrainState,
+}
+
+pub enum BrainState {
+    Wander(f32),
+    GetFood,
+    Relax,
+}
+
+impl Default for BrainState {
+    fn default() -> Self {
+        BrainState::Wander(0.0)
+    }
 }
 
 #[derive(Component, Default)]
 pub struct Path {
     locations: VecDeque<Vec2>,
+}
+
+fn update_brains(mut brains: Query<(&mut Brain, &mut Sprite, &Hunger, &Recreation)>) {
+    for (mut brain, mut sprite, hunger, recreation) in &mut brains {
+        if hunger.value < 0.4 {
+            brain.state = BrainState::GetFood;
+            sprite.color = Color::ORANGE;
+            continue;
+        }
+        if recreation.value < 0.4 {
+            brain.state = BrainState::Relax;
+            sprite.color = Color::BLUE;
+            continue;
+        }
+
+        if !matches!(brain.state, BrainState::Wander(_)) {
+            sprite.color = Color::WHITE;
+            brain.state = BrainState::Wander(0.0);
+        }
+    }
 }
 
 fn spawn_pawns(mut commands: Commands) {
@@ -87,15 +119,17 @@ fn spawn_pawns(mut commands: Commands) {
 
 fn wander(mut brains: Query<(&mut Path, &mut Brain)>, time: Res<Time>) {
     for (mut path, mut brain) in &mut brains {
-        brain.last_wander_time += time.delta_seconds();
-        if brain.last_wander_time > 10.0 || path.locations.is_empty() {
-            brain.last_wander_time = 0.0;
+        if let BrainState::Wander(last_wander_time) = &mut brain.state {
+            *last_wander_time += time.delta_seconds();
+            if *last_wander_time > 10.0 || path.locations.is_empty() {
+                *last_wander_time = 0.0;
 
-            let mut rng = rand::thread_rng();
-            let x = rng.gen::<f32>() * 10.0 - 5.0;
-            let y = rng.gen::<f32>() * 10.0 - 5.0;
+                let mut rng = rand::thread_rng();
+                let x = rng.gen::<f32>() * 10.0 - 5.0;
+                let y = rng.gen::<f32>() * 10.0 - 5.0;
 
-            path.locations.push_back(Vec2::new(x, y));
+                path.locations.push_back(Vec2::new(x, y));
+            }
         }
     }
 }
@@ -134,9 +168,32 @@ fn main() {
                 .build(),
         )
         .add_plugin(GridPlugin::<Wall>::default())
-        .add_systems(Update, (use_grid, follow_path, wander))
+        .add_systems(
+            Update,
+            (
+                use_grid,
+                follow_path,
+                wander,
+                update_brains,
+                apply_hunger,
+                apply_recreation,
+            ),
+        )
         .add_systems(Startup, (spawn_walls, spawn_pawns))
         .run();
+}
+
+// Could be generic needs system
+fn apply_hunger(mut hungers: Query<&mut Hunger>, time: Res<Time>) {
+    for mut hunger in &mut hungers {
+        hunger.value -= time.delta_seconds() * 10.0;
+    }
+}
+
+fn apply_recreation(mut recreations: Query<&mut Recreation>, time: Res<Time>) {
+    for mut recreations in &mut recreations {
+        recreations.value -= time.delta_seconds() * 10.0;
+    }
 }
 
 fn spawn_walls(mut commands: Commands) {
