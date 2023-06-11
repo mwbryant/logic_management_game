@@ -14,6 +14,17 @@ pub struct Grid<T> {
     _marker: PhantomData<T>,
 }
 
+#[derive(Component, Eq, PartialEq, Hash, Clone, Debug)]
+pub struct GridLocation {
+    pub position: (usize, usize),
+}
+
+impl GridLocation {
+    pub fn new(x: usize, y: usize) -> Self {
+        GridLocation { position: (x, y) }
+    }
+}
+
 impl<T> Default for Grid<T> {
     fn default() -> Self {
         Self {
@@ -36,11 +47,6 @@ fn remove_from_grid<T: Component>(mut grid: ResMut<Grid<T>>, mut query: RemovedC
             *entity = None;
         }
     }
-}
-
-#[derive(Component)]
-pub struct GridLocation {
-    pub position: (usize, usize),
 }
 
 fn add_to_grid<T: Component>(

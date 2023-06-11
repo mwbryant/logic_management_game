@@ -8,6 +8,7 @@ pub const HEIGHT: f32 = 480.0;
 
 mod grid;
 use grid::{Grid, GridLocation, GridPlugin};
+mod pathfinding;
 
 // Is default really required
 #[derive(Component, Default, Debug)]

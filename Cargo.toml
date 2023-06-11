@@ -12,4 +12,4 @@ opt-level = 3
 [dependencies]
 bevy = { git = "https://github.com/bevyengine/bevy" }
 rand = "0.8.5"
-
+pathfinding = "4.3.0"
