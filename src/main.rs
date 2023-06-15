@@ -1,4 +1,4 @@
-use graphics::{CharacterSprite, GraphicsPlugin};
+use graphics::{CharacterSprite, GraphicsPlugin, WallSprite};
 use rand::prelude::*;
 use std::collections::VecDeque;
 
@@ -8,7 +8,7 @@ pub const WIDTH: f32 = 640.0;
 pub const HEIGHT: f32 = 480.0;
 
 mod grid;
-use grid::{Grid, GridLocation, GridPlugin};
+use grid::{Grid, GridLocation, GridPlugin, LockToGrid};
 mod graphics;
 mod pathfinding;
 
@@ -194,6 +194,18 @@ fn apply_recreation(mut recreations: Query<&mut Recreation>, time: Res<Time>) {
 }
 
 fn spawn_walls(mut commands: Commands) {
-    commands.spawn((Wall { health: 10.0 }, GridLocation::new(3, 5)));
-    commands.spawn((Wall { health: 25.0 }, GridLocation::new(10, 15)));
+    commands.spawn((
+        SpatialBundle::default(),
+        Wall { health: 10.0 },
+        LockToGrid,
+        WallSprite::Neutral,
+        GridLocation::new(3, 5),
+    ));
+    commands.spawn((
+        SpatialBundle::default(),
+        Wall { health: 25.0 },
+        LockToGrid,
+        WallSprite::Neutral,
+        GridLocation::new(3, 15),
+    ));
 }
