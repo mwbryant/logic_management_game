@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, slice::Iter};
+use std::{marker::PhantomData, ops::{Index, IndexMut}};
 
 use bevy::prelude::*;
 
@@ -11,22 +11,34 @@ pub struct Grid<T> {
     _marker: PhantomData<T>,
 }
 
-#[derive(Component, Eq, PartialEq, Hash, Clone, Debug)]
-pub struct GridLocation {
-    pub position: (usize, usize),
+#[derive(Component, Eq, PartialEq, Hash, Clone, Debug, Deref, DerefMut)]
+pub struct GridLocation(UVec2);
+
+impl<T> Index<&GridLocation> for Grid<T> {
+    type Output = Option<Entity>;
+
+    fn index(&self, index: &GridLocation) -> &Self::Output {
+        &self.entities[index.x as usize][index.y as usize]
+    }
+}
+
+impl<T> IndexMut<&GridLocation> for Grid<T> {
+    fn index_mut(&mut self, index: &GridLocation) -> &mut Self::Output {
+        &mut self.entities[index.x as usize][index.y as usize]
+    }
 }
 
 #[derive(Component)]
 pub struct LockToGrid;
 
 impl GridLocation {
-    pub fn new(x: usize, y: usize) -> Self {
-        GridLocation { position: (x, y) }
+    pub fn new(x: u32, y: u32) -> Self {
+        GridLocation ( UVec2::new(x,  y ) )
     }
 }
 impl<T> Grid<T> {
     pub fn occupied(&self, location: &GridLocation) -> bool {
-        self.entities[location.position.0][location.position.1].is_some()
+        self[location].is_some()
     }
 }
 
@@ -40,7 +52,7 @@ impl<T> Grid<T> {
             .map(|(i, entity)| {
                 (
                     entity.unwrap(),
-                    GridLocation::new(i / GRID_SIZE, i % GRID_SIZE),
+                    GridLocation::new(i as u32 / GRID_SIZE as u32, i as u32 % GRID_SIZE as u32),
                 )
             })
     }
@@ -75,12 +87,12 @@ fn add_to_grid<T: Component>(
     query: Query<(Entity, &GridLocation), Added<T>>,
 ) {
     for (entity, location) in &query {
-        if let Some(existing) = grid.entities[location.position.0][location.position.1] {
+        if let Some(existing) = grid[location] {
             if existing != entity {
-                grid.entities[location.position.0][location.position.1] = Some(entity);
+                grid[location] = Some(entity);
             }
         } else {
-            grid.entities[location.position.0][location.position.1] = Some(entity);
+            grid[location] = Some(entity);
         }
     }
 }
@@ -99,11 +111,17 @@ impl<T: Component> Plugin for GridPlugin<T> {
     }
 }
 
+// Could change detect
 fn lock_to_grid<T: Component>(
     grid: Res<Grid<T>>,
-    mut positions: Query<(&mut Transform, &GridLocation), With<T>>,
+    mut positions: Query<&mut Transform, (With<LockToGrid>, With<T>)>
 ) {
     for (entity, location) in grid.iter() {
-        info!("{:?} at {:?}", entity, location);
+        if let Ok(mut position) = positions.get_mut(entity) {
+            position.translation.x = location.x as f32;
+            position.translation.y = location.y as f32;
+        }
     }
 }
+
+

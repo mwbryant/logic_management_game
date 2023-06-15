@@ -6,7 +6,7 @@ use crate::grid::{Grid, GridLocation, GRID_SIZE};
 
 // TODO this grid location is tied to a grid
 fn neumann_neighbors<T>(grid: &Grid<T>, location: &GridLocation) -> Vec<(GridLocation, usize)> {
-    let (x, y) = location.position;
+    let (x, y) = (location.x, location.y);
 
     let mut sucessors = Vec::new();
     if let Some(left) = x.checked_sub(1) {
@@ -21,14 +21,14 @@ fn neumann_neighbors<T>(grid: &Grid<T>, location: &GridLocation) -> Vec<(GridLoc
             sucessors.push((location, 1));
         }
     }
-    if x + 1 < GRID_SIZE {
+    if x + 1 < GRID_SIZE as u32 {
         let right = x + 1;
         let location = GridLocation::new(right, y);
         if !grid.occupied(&location) {
             sucessors.push((location, 1));
         }
     }
-    if y + 1 < GRID_SIZE {
+    if y + 1 < GRID_SIZE as u32 {
         let up = y + 1;
         let location = GridLocation::new(x, up);
         if !grid.occupied(&location) {
@@ -41,7 +41,7 @@ fn neumann_neighbors<T>(grid: &Grid<T>, location: &GridLocation) -> Vec<(GridLoc
 // OPT precalculate sucessors? Look into pathfinding::grid
 impl GridLocation {
     fn distance(&self, other: &GridLocation) -> usize {
-        self.position.0.abs_diff(other.position.0) + self.position.1.abs_diff(other.position.1)
+        (self.x.abs_diff(other.x) + self.y.abs_diff(other.y)) as usize
     }
 
     fn path_to<T>(
