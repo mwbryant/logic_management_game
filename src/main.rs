@@ -1,3 +1,4 @@
+use graphics::{CharacterSprite, GraphicsPlugin};
 use rand::prelude::*;
 use std::collections::VecDeque;
 
@@ -8,6 +9,7 @@ pub const HEIGHT: f32 = 480.0;
 
 mod grid;
 use grid::{Grid, GridLocation, GridPlugin};
+mod graphics;
 mod pathfinding;
 
 // Is default really required
@@ -22,20 +24,12 @@ fn use_grid(
     keyboard: Res<Input<KeyCode>>,
     mut commands: Commands,
 ) {
-    for entity in grid
-        .entities
-        .iter()
-        // This handles the double array
-        .flatten()
-        // This kills the option
-        .flatten()
-    {
+    for (entity, _) in grid.iter() {
         let wall = walls
-            .get(*entity)
+            .get(entity)
             .expect("entity in grid does not have wall component");
-        info!("{:?}", wall);
         if keyboard.just_pressed(KeyCode::A) {
-            commands.entity(*entity).despawn();
+            commands.entity(entity).despawn();
         }
     }
 }
@@ -100,15 +94,16 @@ fn spawn_pawns(mut commands: Commands) {
     let mut camera = Camera2dBundle::default();
 
     camera.projection.scaling_mode = ScalingMode::AutoMin {
-        min_width: 16.0,
-        min_height: 9.0,
+        min_width: 32.0,
+        min_height: 18.0,
     };
 
     commands.spawn(camera);
 
     for _i in 0..10 {
         commands.spawn((
-            SpriteBundle::default(),
+            SpatialBundle::default(),
+            CharacterSprite::Stand(graphics::Facing::Down),
             Pawn,
             Brain::default(),
             Path::default(),
@@ -161,7 +156,7 @@ fn main() {
                         present_mode: PresentMode::Immediate,
                         title: "Logic Management Game".into(),
                         resolution: (WIDTH, HEIGHT).into(),
-                        resizable: false,
+                        resizable: true,
                         ..default()
                     }),
                     ..default()
@@ -169,6 +164,7 @@ fn main() {
                 .build(),
         )
         .add_plugin(GridPlugin::<Wall>::default())
+        .add_plugin(GraphicsPlugin)
         .add_systems(
             Update,
             (

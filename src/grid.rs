@@ -1,4 +1,7 @@
-use std::{marker::PhantomData, ops::{Index, IndexMut}};
+use std::{
+    marker::PhantomData,
+    ops::{Index, IndexMut},
+};
 
 use bevy::prelude::*;
 
@@ -33,7 +36,7 @@ pub struct LockToGrid;
 
 impl GridLocation {
     pub fn new(x: u32, y: u32) -> Self {
-        GridLocation ( UVec2::new(x,  y ) )
+        GridLocation(UVec2::new(x, y))
     }
 }
 impl<T> Grid<T> {
@@ -114,7 +117,7 @@ impl<T: Component> Plugin for GridPlugin<T> {
 // Could change detect
 fn lock_to_grid<T: Component>(
     grid: Res<Grid<T>>,
-    mut positions: Query<&mut Transform, (With<LockToGrid>, With<T>)>
+    mut positions: Query<&mut Transform, (With<LockToGrid>, With<T>)>,
 ) {
     for (entity, location) in grid.iter() {
         if let Ok(mut position) = positions.get_mut(entity) {
@@ -123,5 +126,3 @@ fn lock_to_grid<T: Component>(
         }
     }
 }
-
-
