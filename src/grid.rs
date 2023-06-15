@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, slice::Iter};
 
 use bevy::prelude::*;
 
@@ -7,9 +7,6 @@ pub const GRID_SIZE: usize = 48;
 // TODO impl iterator
 #[derive(Resource)]
 pub struct Grid<T> {
-    // Problems:
-    // Entites may be despawned and would leave bad refrence - handled by removed system
-    // Entities may have never been added to the right grid - handled by add system
     pub entities: [[Option<Entity>; GRID_SIZE]; GRID_SIZE],
     _marker: PhantomData<T>,
 }
@@ -19,9 +16,33 @@ pub struct GridLocation {
     pub position: (usize, usize),
 }
 
+#[derive(Component)]
+pub struct LockToGrid;
+
 impl GridLocation {
     pub fn new(x: usize, y: usize) -> Self {
         GridLocation { position: (x, y) }
+    }
+}
+impl<T> Grid<T> {
+    pub fn occupied(&self, location: &GridLocation) -> bool {
+        self.entities[location.position.0][location.position.1].is_some()
+    }
+}
+
+impl<T> Grid<T> {
+    pub fn iter(&self) -> impl Iterator<Item = (Entity, GridLocation)> + '_ {
+        self.entities
+            .iter()
+            .flatten()
+            .enumerate()
+            .filter(|(_i, entity)| entity.is_some())
+            .map(|(i, entity)| {
+                (
+                    entity.unwrap(),
+                    GridLocation::new(i / GRID_SIZE, i % GRID_SIZE),
+                )
+            })
     }
 }
 
@@ -72,6 +93,17 @@ pub struct GridPlugin<T> {
 impl<T: Component> Plugin for GridPlugin<T> {
     fn build(&self, app: &mut App) {
         app.init_resource::<Grid<T>>()
+            .add_systems(Update, lock_to_grid::<T>)
+            // TODO move_on_grid
             .add_systems(PreUpdate, (add_to_grid::<T>, remove_from_grid::<T>));
+    }
+}
+
+fn lock_to_grid<T: Component>(
+    grid: Res<Grid<T>>,
+    mut positions: Query<(&mut Transform, &GridLocation), With<T>>,
+) {
+    for (entity, location) in grid.iter() {
+        info!("{:?} at {:?}", entity, location);
     }
 }

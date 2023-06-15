@@ -198,6 +198,6 @@ fn apply_recreation(mut recreations: Query<&mut Recreation>, time: Res<Time>) {
 }
 
 fn spawn_walls(mut commands: Commands) {
-    commands.spawn((Wall { health: 10.0 }, GridLocation { position: (0, 0) }));
-    commands.spawn((Wall { health: 25.0 }, GridLocation { position: (15, 15) }));
+    commands.spawn((Wall { health: 10.0 }, GridLocation { position: (3, 5) }));
+    commands.spawn((Wall { health: 25.0 }, GridLocation { position: (10, 15) }));
 }
