@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use bevy::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Component)]
@@ -5,6 +7,11 @@ pub enum CharacterSprite {
     Stand(Facing),
     StepLeftFoot(Facing),
     StepRightFoot(Facing),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Component)]
+pub enum WallSprite {
+    Neutral,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -15,18 +22,28 @@ pub enum Facing {
     Right,
 }
 
-impl CharacterSprite {
-    pub fn to_index(&self) -> usize {
+impl IndexableSprite for WallSprite {
+    type AtlasHandleWrapper = CharacterAtlas;
+    fn index(&self) -> usize {
         match self {
-            CharacterSprite::Stand(direction) => 0 + direction.to_index() * 16,
-            CharacterSprite::StepLeftFoot(direction) => 1 + direction.to_index() * 16,
-            CharacterSprite::StepRightFoot(direction) => 2 + direction.to_index() * 16,
+            WallSprite::Neutral => 15,
+        }
+    }
+}
+
+impl IndexableSprite for CharacterSprite {
+    type AtlasHandleWrapper = CharacterAtlas;
+    fn index(&self) -> usize {
+        match self {
+            CharacterSprite::Stand(direction) => direction.index() * 16,
+            CharacterSprite::StepLeftFoot(direction) => 1 + direction.index() * 16,
+            CharacterSprite::StepRightFoot(direction) => 2 + direction.index() * 16,
         }
     }
 }
 
 impl Facing {
-    pub fn to_index(&self) -> usize {
+    fn index(&self) -> usize {
         match self {
             Facing::Down => 0,
             Facing::Up => 1,
@@ -41,8 +58,20 @@ pub struct GraphicsPlugin;
 impl Plugin for GraphicsPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CharacterAtlas>()
-            .add_systems(Update, update_character_sprite)
-            .add_systems(PreUpdate, add_sprite_to_character);
+            .add_systems(
+                Update,
+                (
+                    update_indexable_sprite::<CharacterSprite>,
+                    update_indexable_sprite::<WallSprite>,
+                ),
+            )
+            .add_systems(
+                PreUpdate,
+                (
+                    add_sprite_to_indexable::<CharacterSprite>,
+                    add_sprite_to_indexable::<WallSprite>,
+                ),
+            );
     }
 }
 
@@ -64,14 +93,15 @@ impl FromWorld for CharacterAtlas {
     }
 }
 
-fn add_sprite_to_character(
+fn add_sprite_to_indexable<T: Component + IndexableSprite>(
     mut commands: Commands,
-    characters: Query<Entity, (Added<CharacterSprite>, Without<TextureAtlasSprite>)>,
-    character_atlas: Res<CharacterAtlas>,
+    sprites: Query<Entity, (Added<T>, Without<TextureAtlasSprite>)>,
+    atlas: Res<T::AtlasHandleWrapper>,
 ) {
-    for character in &characters {
+    for character in &sprites {
+        let handle = atlas.deref().deref();
         commands.entity(character).insert((
-            character_atlas.0.clone(),
+            handle.clone(),
             TextureAtlasSprite {
                 custom_size: Some(Vec2::ONE),
                 ..default()
@@ -80,8 +110,16 @@ fn add_sprite_to_character(
     }
 }
 
-fn update_character_sprite(mut characters: Query<(&CharacterSprite, &mut TextureAtlasSprite)>) {
-    for (character_sprite, mut sprite) in characters.iter_mut() {
-        sprite.index = character_sprite.to_index();
+fn update_indexable_sprite<T: Component + IndexableSprite>(
+    mut sprites: Query<(&T, &mut TextureAtlasSprite)>,
+) {
+    for (indexable, mut sprite) in sprites.iter_mut() {
+        sprite.index = indexable.index();
     }
+}
+
+pub trait IndexableSprite {
+    type AtlasHandleWrapper: Resource + std::ops::Deref<Target = Handle<TextureAtlas>>;
+
+    fn index(&self) -> usize;
 }
