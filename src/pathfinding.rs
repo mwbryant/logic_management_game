@@ -1,8 +1,16 @@
-use std::error::Error;
+use std::collections::VecDeque;
 
-use pathfinding::prelude::astar;
+use crate::prelude::*;
+use bevy::tasks::{AsyncComputeTaskPool, Task};
+use futures_lite::future;
+use pathfinding::prelude::{astar, directions::W};
 
 use crate::grid::{Grid, GridLocation, GRID_SIZE};
+
+#[derive(Component, Default)]
+pub struct AiPath {
+    pub locations: VecDeque<Vec2>,
+}
 
 // TODO this grid location is tied to a grid
 fn neumann_neighbors<T>(grid: &Grid<T>, location: &GridLocation) -> Vec<(GridLocation, usize)> {
@@ -38,28 +46,97 @@ fn neumann_neighbors<T>(grid: &Grid<T>, location: &GridLocation) -> Vec<(GridLoc
     sucessors
 }
 
+pub struct Path {
+    pub steps: Vec<GridLocation>,
+}
+
+impl Path {
+    pub fn optimize_corners(&mut self) {
+        // i must be tracked here because vec len changes
+        let mut i = 0;
+        while i + 2 < self.steps.len() {
+            let first_step = &self.steps[i];
+            let third_step = &self.steps[i + 2];
+            //If both x and y change then this is a corner
+            if first_step.x != third_step.x && first_step.y != third_step.y {
+                self.steps.remove(i + 1);
+            }
+            i += 1;
+        }
+    }
+}
+
 // OPT precalculate sucessors? Look into pathfinding::grid
 impl GridLocation {
     fn distance(&self, other: &GridLocation) -> usize {
         (self.x.abs_diff(other.x) + self.y.abs_diff(other.y)) as usize
     }
+}
 
-    pub fn path_to<T>(
+impl<T> Grid<T> {
+    pub fn path_to(
         &self,
+        start: &GridLocation,
         goal: &GridLocation,
-        grid: &Grid<T>,
-    ) -> Result<Vec<GridLocation>, PathfindingError> {
+    ) -> Result<Path, PathfindingError> {
         let result = astar(
-            self,
-            |p| neumann_neighbors(grid, p),
+            start,
+            |p| neumann_neighbors(self, p),
             |p| p.distance(goal) / 3,
             |p| p == goal,
         );
 
-        if let Some((path, _length)) = result {
-            Ok(path)
+        if let Some((steps, _length)) = result {
+            Ok(Path { steps })
         } else {
             Err(PathfindingError)
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct PathfindingTask(Entity, Task<Result<Path, PathfindingError>>);
+
+pub fn spawn_optimized_pathfinding_task<T: Component>(
+    commands: &mut Commands,
+    target: Entity,
+    grid: &Grid<T>,
+    start: &GridLocation,
+    end: &GridLocation,
+) -> Entity {
+    let thread_pool = AsyncComputeTaskPool::get();
+    // Must clone because the grid can change between frames
+    let start = start.clone();
+    let end = end.clone();
+    let grid = grid.clone();
+
+    let task = thread_pool.spawn(async move {
+        let mut path = grid.path_to(&start, &end);
+        let _ = path.as_mut().map(|p| p.optimize_corners());
+        path
+    });
+
+    commands.spawn(PathfindingTask(target, task)).id()
+}
+
+pub fn apply_pathfinding(
+    mut commands: Commands,
+    mut paths: Query<&mut AiPath>,
+    mut tasks: Query<(Entity, &mut PathfindingTask)>,
+) {
+    for (task_entity, mut task) in &mut tasks {
+        if let Some(result) = future::block_on(future::poll_once(&mut task.1)) {
+            commands.entity(task_entity).despawn();
+            if let Ok(mut ai_path) = paths.get_mut(task.0) {
+                if let Ok(path) = result {
+                    ai_path.locations.clear();
+                    for location in path.steps.iter() {
+                        ai_path
+                            .locations
+                            .push_back(Vec2::new(location.x as f32, location.y as f32));
+                    }
+                }
+            }
         }
     }
 }
@@ -83,8 +160,7 @@ mod tests {
         grid.entities[2][1] = Some(Entity::from_raw(0));
         grid.entities[2][2] = Some(Entity::from_raw(0));
 
-        let result = start.path_to(&goal, &grid);
-        println!("{:?}", result);
+        let result = grid.path_to(&start, &goal);
         assert!(result.is_ok());
     }
 }

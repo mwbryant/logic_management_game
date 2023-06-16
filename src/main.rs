@@ -4,8 +4,8 @@ use std::collections::VecDeque;
 use bevy::{render::camera::ScalingMode, window::PresentMode};
 use logic_management_tutorial::prelude::*;
 
-pub const WIDTH: f32 = 640.0;
-pub const HEIGHT: f32 = 480.0;
+pub const WIDTH: f32 = 1920.0;
+pub const HEIGHT: f32 = 1080.0;
 
 // Is default really required
 #[derive(Component, Default, Debug)]
@@ -60,11 +60,6 @@ impl Default for BrainState {
     }
 }
 
-#[derive(Component, Default)]
-pub struct Path {
-    locations: VecDeque<Vec2>,
-}
-
 fn update_brains(mut brains: Query<(&mut Brain, &mut Sprite, &Hunger, &Recreation)>) {
     for (mut brain, mut sprite, hunger, recreation) in &mut brains {
         if hunger.value < 0.4 {
@@ -102,7 +97,7 @@ fn spawn_pawns(mut commands: Commands) {
             CharacterSprite::Stand(Facing::Down),
             Pawn,
             Brain::default(),
-            Path::default(),
+            AiPath::default(),
             Hunger { value: 100.0 },
             Recreation { value: 100.0 },
         ));
@@ -110,14 +105,15 @@ fn spawn_pawns(mut commands: Commands) {
 }
 
 fn wander(
-    mut brains: Query<(&mut Path, &mut Brain, &Transform)>,
+    mut commands: Commands,
+    mut brains: Query<(Entity, &AiPath, &mut Brain, &Transform)>,
     time: Res<Time>,
     walls: Res<Grid<Wall>>,
 ) {
-    for (mut path, mut brain, transform) in &mut brains {
+    for (target, path, mut brain, transform) in &mut brains {
         if let BrainState::Wander(last_wander_time) = &mut brain.state {
             *last_wander_time += time.delta_seconds();
-            if *last_wander_time > 10.0 && path.locations.is_empty() {
+            if *last_wander_time > 1.0 && path.locations.is_empty() {
                 *last_wander_time = 0.0;
 
                 let mut rng = rand::thread_rng();
@@ -128,21 +124,15 @@ fn wander(
                     transform.translation.x as u32,
                     transform.translation.y as u32,
                 );
-                let target = GridLocation::new(x, y);
-                info!("{:?}, {:?}", start, target);
-                if let Ok(new_path) = start.path_to(&target, &walls) {
-                    for location in new_path.iter() {
-                        path.locations
-                            .push_back(Vec2::new(location.x as f32, location.y as f32));
-                    }
-                }
+                let end = GridLocation::new(x, y);
+                spawn_optimized_pathfinding_task(&mut commands, target, &walls, &start, &end);
             }
         }
     }
 }
 
 // Does this need to read global transform
-fn follow_path(mut paths: Query<(&mut Transform, &mut Path)>, time: Res<Time>) {
+fn follow_path(mut paths: Query<(&mut Transform, &mut AiPath)>, time: Res<Time>) {
     for (mut transform, mut path) in &mut paths {
         if let Some(next_target) = path.locations.front() {
             let delta = *next_target - transform.translation.truncate();
@@ -183,6 +173,7 @@ fn main() {
                 follow_path,
                 wander,
                 update_brains,
+                apply_pathfinding,
                 apply_hunger,
                 apply_recreation,
             ),

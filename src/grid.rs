@@ -14,6 +14,15 @@ pub struct Grid<T> {
     _marker: PhantomData<T>,
 }
 
+impl<T> Clone for Grid<T> {
+    fn clone(&self) -> Self {
+        Self {
+            entities: self.entities.clone(),
+            _marker: self._marker.clone(),
+        }
+    }
+}
+
 #[derive(Component, Eq, PartialEq, Hash, Clone, Debug, Deref, DerefMut)]
 pub struct GridLocation(UVec2);
 
