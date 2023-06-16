@@ -1,7 +1,6 @@
 #![allow(clippy::type_complexity)]
-mod grid;
-use grid::{Grid, GridLocation, GridPlugin, LockToGrid};
 mod graphics;
+mod grid;
 mod pathfinding;
 
 pub mod prelude {

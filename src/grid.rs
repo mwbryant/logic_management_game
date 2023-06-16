@@ -17,8 +17,8 @@ pub struct Grid<T> {
 impl<T> Clone for Grid<T> {
     fn clone(&self) -> Self {
         Self {
-            entities: self.entities.clone(),
-            _marker: self._marker.clone(),
+            entities: self.entities,
+            _marker: self._marker,
         }
     }
 }

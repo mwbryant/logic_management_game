@@ -1,5 +1,4 @@
 use rand::prelude::*;
-use std::collections::VecDeque;
 
 use bevy::{render::camera::ScalingMode, window::PresentMode};
 use logic_management_tutorial::prelude::*;
@@ -10,7 +9,7 @@ pub const HEIGHT: f32 = 1080.0;
 // Is default really required
 #[derive(Component, Default, Debug)]
 pub struct Wall {
-    health: f32,
+    _health: f32,
 }
 
 fn use_grid(
@@ -20,7 +19,7 @@ fn use_grid(
     mut commands: Commands,
 ) {
     for (entity, _) in grid.iter() {
-        let wall = walls
+        let _wall = walls
             .get(entity)
             .expect("entity in grid does not have wall component");
         if keyboard.just_pressed(KeyCode::A) {
@@ -199,7 +198,7 @@ fn spawn_walls(mut commands: Commands) {
     for i in 0..10 {
         commands.spawn((
             SpatialBundle::default(),
-            Wall { health: 10.0 },
+            Wall { _health: 10.0 },
             LockToGrid,
             WallSprite::Neutral,
             GridLocation::new(3, i),

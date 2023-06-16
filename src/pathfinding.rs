@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use crate::prelude::*;
 use bevy::tasks::{AsyncComputeTaskPool, Task};
 use futures_lite::future;
-use pathfinding::prelude::{astar, directions::W};
+use pathfinding::prelude::astar;
 
 use crate::grid::{Grid, GridLocation, GRID_SIZE};
 
