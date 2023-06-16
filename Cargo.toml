@@ -2,6 +2,7 @@
 name = "logic_management_tutorial"
 version = "0.1.0"
 edition = "2021"
+# default-run = "main"
 
 [profile.dev]
 opt-level = 1
@@ -9,7 +10,34 @@ opt-level = 1
 [profile.dev.package."*"]
 opt-level = 3
 
+[features]
+dev = [
+    "bevy/bevy_dylib",
+]
+
+default = [
+    "bevy/animation",
+    "bevy/bevy_asset",
+    "bevy/bevy_scene",
+    "bevy/bevy_winit",
+    "bevy/bevy_core_pipeline",
+    "bevy/bevy_pbr",
+    "bevy/serialize",
+    "bevy/bevy_gltf",
+    "bevy/bevy_render",
+    "bevy/bevy_sprite",
+    "bevy/bevy_text",
+    "bevy/bevy_ui",
+    "bevy/png",
+    "bevy/hdr",
+    "bevy/zstd",
+    "bevy/x11",
+    "bevy/ktx2",
+    "bevy/filesystem_watcher",
+    "bevy/tonemapping_luts"
+]
+
 [dependencies]
-bevy = { git = "https://github.com/bevyengine/bevy" }
+bevy = { git = "https://github.com/bevyengine/bevy" , default-features = false }
 rand = "0.8.5"
 pathfinding = "4.3.0"

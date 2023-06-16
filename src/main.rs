@@ -1,16 +1,11 @@
-use graphics::{CharacterSprite, GraphicsPlugin, WallSprite};
 use rand::prelude::*;
 use std::collections::VecDeque;
 
-use bevy::{prelude::*, render::camera::ScalingMode, window::PresentMode};
+use bevy::{render::camera::ScalingMode, window::PresentMode};
+use logic_management_tutorial::prelude::*;
 
 pub const WIDTH: f32 = 640.0;
 pub const HEIGHT: f32 = 480.0;
-
-mod grid;
-use grid::{Grid, GridLocation, GridPlugin, LockToGrid};
-mod graphics;
-mod pathfinding;
 
 // Is default really required
 #[derive(Component, Default, Debug)]
@@ -94,16 +89,17 @@ fn spawn_pawns(mut commands: Commands) {
     let mut camera = Camera2dBundle::default();
 
     camera.projection.scaling_mode = ScalingMode::AutoMin {
-        min_width: 32.0,
-        min_height: 18.0,
+        min_width: 64.0,
+        min_height: 36.0,
     };
 
     commands.spawn(camera);
 
-    for _i in 0..10 {
+    for _i in 0..1 {
+        info!("Spawning");
         commands.spawn((
             SpatialBundle::default(),
-            CharacterSprite::Stand(graphics::Facing::Down),
+            CharacterSprite::Stand(Facing::Down),
             Pawn,
             Brain::default(),
             Path::default(),
@@ -113,18 +109,33 @@ fn spawn_pawns(mut commands: Commands) {
     }
 }
 
-fn wander(mut brains: Query<(&mut Path, &mut Brain)>, time: Res<Time>) {
-    for (mut path, mut brain) in &mut brains {
+fn wander(
+    mut brains: Query<(&mut Path, &mut Brain, &Transform)>,
+    time: Res<Time>,
+    walls: Res<Grid<Wall>>,
+) {
+    for (mut path, mut brain, transform) in &mut brains {
         if let BrainState::Wander(last_wander_time) = &mut brain.state {
             *last_wander_time += time.delta_seconds();
-            if *last_wander_time > 10.0 || path.locations.is_empty() {
+            if *last_wander_time > 10.0 && path.locations.is_empty() {
                 *last_wander_time = 0.0;
 
                 let mut rng = rand::thread_rng();
-                let x = rng.gen::<f32>() * 10.0 - 5.0;
-                let y = rng.gen::<f32>() * 10.0 - 5.0;
+                let x = rng.gen::<u32>() % GRID_SIZE as u32;
+                let y = rng.gen::<u32>() % GRID_SIZE as u32;
 
-                path.locations.push_back(Vec2::new(x, y));
+                let start = GridLocation::new(
+                    transform.translation.x as u32,
+                    transform.translation.y as u32,
+                );
+                let target = GridLocation::new(x, y);
+                info!("{:?}, {:?}", start, target);
+                if let Ok(new_path) = start.path_to(&target, &walls) {
+                    for location in new_path.iter() {
+                        path.locations
+                            .push_back(Vec2::new(location.x as f32, location.y as f32));
+                    }
+                }
             }
         }
     }
@@ -194,18 +205,13 @@ fn apply_recreation(mut recreations: Query<&mut Recreation>, time: Res<Time>) {
 }
 
 fn spawn_walls(mut commands: Commands) {
-    commands.spawn((
-        SpatialBundle::default(),
-        Wall { health: 10.0 },
-        LockToGrid,
-        WallSprite::Neutral,
-        GridLocation::new(3, 5),
-    ));
-    commands.spawn((
-        SpatialBundle::default(),
-        Wall { health: 25.0 },
-        LockToGrid,
-        WallSprite::Neutral,
-        GridLocation::new(3, 15),
-    ));
+    for i in 0..10 {
+        commands.spawn((
+            SpatialBundle::default(),
+            Wall { health: 10.0 },
+            LockToGrid,
+            WallSprite::Neutral,
+            GridLocation::new(3, i),
+        ));
+    }
 }

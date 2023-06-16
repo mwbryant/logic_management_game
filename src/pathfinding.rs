@@ -44,7 +44,7 @@ impl GridLocation {
         (self.x.abs_diff(other.x) + self.y.abs_diff(other.y)) as usize
     }
 
-    fn path_to<T>(
+    pub fn path_to<T>(
         &self,
         goal: &GridLocation,
         grid: &Grid<T>,
