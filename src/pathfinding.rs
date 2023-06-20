@@ -7,6 +7,14 @@ use pathfinding::prelude::astar;
 
 use crate::grid::{Grid, GridLocation, GRID_SIZE};
 
+pub struct PathfindingPlugin;
+
+impl Plugin for PathfindingPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, apply_pathfinding_to_ai);
+    }
+}
+
 #[derive(Component, Default)]
 pub struct AiPath {
     pub locations: VecDeque<Vec2>,
@@ -119,7 +127,7 @@ pub fn spawn_optimized_pathfinding_task<T: Component>(
     commands.spawn(PathfindingTask(target, task)).id()
 }
 
-pub fn apply_pathfinding(
+pub fn apply_pathfinding_to_ai(
     mut commands: Commands,
     mut paths: Query<&mut AiPath>,
     mut tasks: Query<(Entity, &mut PathfindingTask)>,
