@@ -48,6 +48,7 @@ impl GridLocation {
         GridLocation(UVec2::new(x, y))
     }
 }
+
 impl<T> Grid<T> {
     pub fn occupied(&self, location: &GridLocation) -> bool {
         self[location].is_some()
@@ -80,8 +81,7 @@ impl<T> Default for Grid<T> {
 }
 
 fn remove_from_grid<T: Component>(mut grid: ResMut<Grid<T>>, mut query: RemovedComponents<T>) {
-    for removed_entity in query.iter() {
-        // Search for entity
+    for removed_entity in query.iter() { // Search for entity
         if let Some(entity) = grid
             .entities
             .iter_mut()

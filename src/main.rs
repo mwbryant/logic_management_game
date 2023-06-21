@@ -1,6 +1,5 @@
-use bevy::{render::camera::ScalingMode, window::PresentMode};
+use bevy::window::PresentMode;
 use logic_management_tutorial::prelude::*;
-use rand::prelude::*;
 
 pub const WIDTH: f32 = 1920.0;
 pub const HEIGHT: f32 = 1080.0;
@@ -22,15 +21,6 @@ fn use_grid(
 }
 
 fn spawn_pawns(mut commands: Commands) {
-    let mut camera = Camera2dBundle::default();
-
-    camera.projection.scaling_mode = ScalingMode::AutoMin {
-        min_width: 64.0,
-        min_height: 36.0,
-    };
-
-    commands.spawn(camera);
-
     for _i in 0..1 {
         info!("Spawning");
         commands.spawn((
@@ -64,6 +54,7 @@ fn main() {
         )
         .add_plugin(GraphicsPlugin)
         .add_plugin(AiPlugin)
+        .add_plugin(SimpleCameraPlugin)
         .add_plugin(BuildingPlugin)
         .add_plugin(NeedsPlugin)
         .add_plugin(PathfindingPlugin)
