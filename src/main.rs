@@ -23,7 +23,6 @@ fn use_grid(
 
 fn spawn_pawns(mut commands: Commands) {
     for _i in 0..100 {
-        info!("Spawning");
         commands.spawn((
             SpatialBundle::from_transform(Transform::from_xyz(10.0, 10.0, 800.0)),
             CharacterSprite::Stand(Facing::Down),

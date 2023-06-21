@@ -5,7 +5,7 @@ use std::{
 
 use bevy::prelude::*;
 
-pub const GRID_SIZE: usize = 100;
+pub const GRID_SIZE: usize = 200;
 
 // TODO impl iterator
 #[derive(Resource)]
