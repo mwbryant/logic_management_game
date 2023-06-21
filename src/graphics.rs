@@ -12,6 +12,7 @@ pub enum CharacterSprite {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Component)]
 pub enum WallSprite {
     Neutral,
+    Outline,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,6 +28,7 @@ impl IndexableSprite for WallSprite {
     fn index(&self) -> usize {
         match self {
             WallSprite::Neutral => 15,
+            WallSprite::Outline => 14,
         }
     }
 }
