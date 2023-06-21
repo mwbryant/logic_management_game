@@ -103,7 +103,7 @@ impl<T> Grid<T> {
 }
 
 #[derive(Component)]
-pub struct PathfindingTask(Entity, Task<Result<Path, PathfindingError>>);
+pub struct PathfindingTask(pub Entity, Task<Result<Path, PathfindingError>>);
 
 pub fn spawn_optimized_pathfinding_task<T: Component>(
     commands: &mut Commands,
@@ -111,12 +111,20 @@ pub fn spawn_optimized_pathfinding_task<T: Component>(
     grid: &Grid<T>,
     start: &GridLocation,
     end: &GridLocation,
-) -> Entity {
+    pathfinding_tasks: &Query<&PathfindingTask>,
+) {
+    for task in pathfinding_tasks {
+        if target == task.0 {
+            // Already a task for this entity, don't spam jobs
+            return;
+        }
+    }
     let thread_pool = AsyncComputeTaskPool::get();
     // Must clone because the grid can change between frames
     let start = start.clone();
     let end = end.clone();
-    let grid = grid.clone();
+    // Must box to prevent stack overflows on very large grids
+    let grid = Box::new(grid.clone());
 
     let task = thread_pool.spawn(async move {
         let mut path = grid.path_to(&start, &end);
@@ -124,7 +132,7 @@ pub fn spawn_optimized_pathfinding_task<T: Component>(
         path
     });
 
-    commands.spawn(PathfindingTask(target, task)).id()
+    commands.spawn(PathfindingTask(target, task));
 }
 
 pub fn apply_pathfinding_to_ai(

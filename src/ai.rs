@@ -52,6 +52,7 @@ fn update_brains(mut brains: Query<(&mut Brain, &mut Sprite, &Hunger, &Recreatio
 fn wander(
     mut commands: Commands,
     mut brains: Query<(Entity, &AiPath, &mut Brain, &Transform)>,
+    pathfinding_tasks: Query<&PathfindingTask>,
     time: Res<Time>,
     walls: Res<Grid<Wall>>,
 ) {
@@ -70,7 +71,14 @@ fn wander(
                     transform.translation.y as u32,
                 );
                 let end = GridLocation::new(x, y);
-                spawn_optimized_pathfinding_task(&mut commands, target, &walls, &start, &end);
+                spawn_optimized_pathfinding_task(
+                    &mut commands,
+                    target,
+                    &walls,
+                    &start,
+                    &end,
+                    &pathfinding_tasks,
+                );
             }
         }
     }
