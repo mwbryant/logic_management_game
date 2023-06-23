@@ -25,8 +25,10 @@ fn spawn_pawns(mut commands: Commands) {
     for _i in 0..100 {
         commands.spawn((
             SpatialBundle::from_transform(Transform::from_xyz(10.0, 10.0, 800.0)),
-            CharacterSprite::Stand(Facing::Down),
+            CharacterSprite::default(),
             Pawn,
+            LastDirection(Vec2::ZERO),
+            AnimationTimer(Timer::from_seconds(0.2, TimerMode::Repeating)),
             Brain::default(),
             AiPath::default(),
             Hunger { value: 100.0 },
@@ -55,6 +57,7 @@ fn main() {
         .add_plugin(GraphicsPlugin)
         .add_plugin(AiPlugin)
         .add_plugin(SimpleCameraPlugin)
+        .add_plugin(FrameAnimationPlugin)
         .add_plugin(BuildingPlugin)
         .add_plugin(NeedsPlugin)
         .add_plugin(PathfindingPlugin)

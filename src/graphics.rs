@@ -1,12 +1,41 @@
-use std::ops::Deref;
+use std::{f32::consts::PI, ops::Deref};
 
 use bevy::prelude::*;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Component)]
-pub enum CharacterSprite {
-    Stand(Facing),
-    StepLeftFoot(Facing),
-    StepRightFoot(Facing),
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum WalkCycle {
+    Stand(bool),
+    #[default]
+    StepLeftFoot,
+    StepRightFoot,
+}
+
+impl WalkCycle {
+    pub fn next_frame(&self) -> Self {
+        match self {
+            WalkCycle::Stand(last) => {
+                if *last {
+                    WalkCycle::StepLeftFoot
+                } else {
+                    WalkCycle::StepRightFoot
+                }
+            }
+            WalkCycle::StepLeftFoot => WalkCycle::Stand(false),
+            WalkCycle::StepRightFoot => WalkCycle::Stand(true),
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Component)]
+pub struct CharacterSprite {
+    pub walk_stage: WalkCycle,
+    pub facing: Facing,
+}
+
+impl CharacterSprite {
+    pub fn next_frame(&mut self) {
+        self.walk_stage = self.walk_stage.next_frame();
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Component)]
@@ -15,12 +44,32 @@ pub enum WallSprite {
     Outline,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Component)]
 pub enum Facing {
     Up,
+    #[default]
     Down,
     Left,
     Right,
+}
+
+impl Facing {
+    //Gross but works ugh
+    pub fn from_direction(direction: &Vec2) -> Self {
+        if direction.x == 0.0 && direction.y == 0.0 {
+            Facing::Down
+        } else if direction.x.abs() > direction.y.abs() {
+            if direction.x > 0.0 {
+                Facing::Right
+            } else {
+                Facing::Left
+            }
+        } else if direction.y > 0.0 {
+            Facing::Up
+        } else {
+            Facing::Down
+        }
+    }
 }
 
 impl IndexableSprite for WallSprite {
@@ -36,10 +85,16 @@ impl IndexableSprite for WallSprite {
 impl IndexableSprite for CharacterSprite {
     type AtlasHandleWrapper = CharacterAtlas;
     fn index(&self) -> usize {
+        self.walk_stage.index() + 16 * self.facing.index()
+    }
+}
+
+impl WalkCycle {
+    fn index(&self) -> usize {
         match self {
-            CharacterSprite::Stand(direction) => direction.index() * 16,
-            CharacterSprite::StepLeftFoot(direction) => 1 + direction.index() * 16,
-            CharacterSprite::StepRightFoot(direction) => 2 + direction.index() * 16,
+            WalkCycle::Stand(_) => 0,
+            WalkCycle::StepLeftFoot => 1,
+            WalkCycle::StepRightFoot => 2,
         }
     }
 }
@@ -49,8 +104,8 @@ impl Facing {
         match self {
             Facing::Down => 0,
             Facing::Up => 1,
-            Facing::Left => 2,
-            Facing::Right => 3,
+            Facing::Right => 2,
+            Facing::Left => 3,
         }
     }
 }

@@ -119,6 +119,10 @@ pub fn spawn_optimized_pathfinding_task<T: Component>(
             return;
         }
     }
+    // FIXME, bug where the pawn thinks it's currently 1 tile left or right and sends a request starting within a wall
+    if grid.occupied(end) {
+        return;
+    }
     let thread_pool = AsyncComputeTaskPool::get();
     // Must clone because the grid can change between frames
     let start = start.clone();

@@ -5,7 +5,7 @@ use std::{
 
 use bevy::prelude::*;
 
-pub const GRID_SIZE: usize = 200;
+pub const GRID_SIZE: usize = 20;
 
 // TODO impl iterator
 #[derive(Resource)]
@@ -102,6 +102,7 @@ fn add_to_grid<T: Component>(
     for (entity, location) in &query {
         if let Some(existing) = grid[location] {
             if existing != entity {
+                warn!("Over-writing entity in grid");
                 grid[location] = Some(entity);
             }
         } else {

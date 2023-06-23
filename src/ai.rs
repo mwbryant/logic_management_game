@@ -85,17 +85,24 @@ fn wander(
 }
 
 // Does this need to read global transform
-fn follow_path(mut paths: Query<(&mut Transform, &mut AiPath)>, time: Res<Time>) {
-    for (mut transform, mut path) in &mut paths {
+fn follow_path(
+    mut paths: Query<(&mut Transform, &mut AiPath, &mut LastDirection)>,
+    time: Res<Time>,
+) {
+    for (mut transform, mut path, mut last_direction) in &mut paths {
         if let Some(next_target) = path.locations.front() {
             let delta = *next_target - transform.translation.truncate();
             let travel_amount = time.delta_seconds();
 
             if delta.length() > travel_amount * 1.1 {
-                transform.translation += delta.normalize().extend(0.0) * travel_amount;
+                let direction = delta.normalize().extend(0.0) * travel_amount;
+                last_direction.0 = direction.truncate();
+                transform.translation += direction;
             } else {
                 path.locations.pop_front();
             }
+        } else {
+            last_direction.0 = Vec2::ZERO;
         }
     }
 }

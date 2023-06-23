@@ -1,5 +1,6 @@
 #![allow(clippy::type_complexity)]
 mod ai;
+mod animation;
 mod buildings;
 mod camera;
 mod graphics;
@@ -12,6 +13,7 @@ pub mod prelude {
     pub use bevy::{prelude::*, utils::HashMap};
 
     pub use crate::ai::*;
+    pub use crate::animation::*;
     pub use crate::buildings::*;
     pub use crate::camera::*;
     pub use crate::graphics::*;
