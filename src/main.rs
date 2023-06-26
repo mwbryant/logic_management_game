@@ -54,13 +54,15 @@ fn main() {
                 })
                 .build(),
         )
-        .add_plugin(GraphicsPlugin)
-        .add_plugin(AiPlugin)
-        .add_plugin(SimpleCameraPlugin)
-        .add_plugin(FrameAnimationPlugin)
-        .add_plugin(BuildingPlugin)
-        .add_plugin(NeedsPlugin)
-        .add_plugin(PathfindingPlugin)
+        .add_plugins((
+            GraphicsPlugin,
+            AiPlugin,
+            SimpleCameraPlugin,
+            FrameAnimationPlugin,
+            BuildingPlugin,
+            NeedsPlugin,
+            PathfindingPlugin,
+        ))
         .add_systems(Update, use_grid)
         .add_systems(Startup, (spawn_maze, spawn_pawns, spawn_outline))
         .run();
@@ -111,18 +113,6 @@ fn spawn_maze(mut commands: Commands) {
             LockToGrid,
             WallSprite::None,
             filled,
-        ));
-    }
-}
-
-fn spawn_walls(mut commands: Commands) {
-    for i in 0..10 {
-        commands.spawn((
-            SpatialBundle::default(),
-            Wall { _health: 10.0 },
-            LockToGrid,
-            WallSprite::None,
-            GridLocation::new(3, i),
         ));
     }
 }

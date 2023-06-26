@@ -5,7 +5,7 @@ use std::{
 
 use bevy::prelude::*;
 
-pub const GRID_SIZE: usize = 20;
+pub const GRID_SIZE: usize = 100;
 
 // TODO impl iterator
 #[derive(Resource)]
@@ -49,9 +49,9 @@ impl GridLocation {
     }
 }
 
-impl Into<GridLocation> for IVec2 {
-    fn into(self) -> GridLocation {
-        GridLocation(self)
+impl From<IVec2> for GridLocation {
+    fn from(value: IVec2) -> Self {
+        GridLocation(value)
     }
 }
 

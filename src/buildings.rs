@@ -4,7 +4,7 @@ pub struct BuildingPlugin;
 
 impl Plugin for BuildingPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(GridPlugin::<Wall>::default());
+        app.add_plugins(GridPlugin::<Wall>::default());
     }
 }
 
