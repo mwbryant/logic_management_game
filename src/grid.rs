@@ -24,7 +24,7 @@ impl<T> Clone for Grid<T> {
 }
 
 #[derive(Component, Eq, PartialEq, Hash, Clone, Debug, Deref, DerefMut)]
-pub struct GridLocation(UVec2);
+pub struct GridLocation(pub IVec2);
 
 impl<T> Index<&GridLocation> for Grid<T> {
     type Output = Option<Entity>;
@@ -45,13 +45,26 @@ pub struct LockToGrid;
 
 impl GridLocation {
     pub fn new(x: u32, y: u32) -> Self {
-        GridLocation(UVec2::new(x, y))
+        GridLocation(IVec2::new(x as i32, y as i32))
+    }
+}
+
+impl Into<GridLocation> for IVec2 {
+    fn into(self) -> GridLocation {
+        GridLocation(self)
     }
 }
 
 impl<T> Grid<T> {
     pub fn occupied(&self, location: &GridLocation) -> bool {
-        self[location].is_some()
+        Grid::<T>::valid_index(location) && self[location].is_some()
+    }
+
+    pub fn valid_index(location: &GridLocation) -> bool {
+        location.x >= 0
+            && location.y >= 0
+            && location.x < GRID_SIZE as i32
+            && location.y < GRID_SIZE as i32
     }
 }
 

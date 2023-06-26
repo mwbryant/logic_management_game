@@ -109,7 +109,7 @@ fn spawn_maze(mut commands: Commands) {
             SpatialBundle::default(),
             Wall { _health: 10.0 },
             LockToGrid,
-            WallSprite::Neutral,
+            WallSprite::None,
             filled,
         ));
     }
@@ -121,7 +121,7 @@ fn spawn_walls(mut commands: Commands) {
             SpatialBundle::default(),
             Wall { _health: 10.0 },
             LockToGrid,
-            WallSprite::Neutral,
+            WallSprite::None,
             GridLocation::new(3, i),
         ));
     }

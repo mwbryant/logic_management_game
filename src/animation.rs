@@ -22,7 +22,6 @@ fn update_character_sprite_animation(
     for (mut sprite, direction, mut animation) in &mut sprites {
         animation.tick(time.delta());
         if animation.just_finished() {
-            info!("{:?}", sprite);
             sprite.facing = Facing::from_direction(direction);
             sprite.next_frame();
         }

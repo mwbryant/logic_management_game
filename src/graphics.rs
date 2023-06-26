@@ -1,6 +1,6 @@
 use std::{f32::consts::PI, ops::Deref};
 
-use bevy::prelude::*;
+use crate::prelude::*;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum WalkCycle {
@@ -40,7 +40,22 @@ impl CharacterSprite {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Component)]
 pub enum WallSprite {
-    Neutral,
+    All,
+    None,
+    NorthSouth,
+    EastWest,
+    East,
+    South,
+    West,
+    North,
+    EastSouth,
+    WestSouth,
+    NorthWest,
+    NorthEast,
+    NorthWestSouth,
+    NorthEastWest,
+    NorthEastSouth,
+    EastWestSouth,
     Outline,
 }
 
@@ -76,8 +91,27 @@ impl IndexableSprite for WallSprite {
     type AtlasHandleWrapper = CharacterAtlas;
     fn index(&self) -> usize {
         match self {
-            WallSprite::Neutral => 15,
-            WallSprite::Outline => 14,
+            WallSprite::All => 12,
+            WallSprite::None => 13,
+            WallSprite::NorthSouth => 14,
+            WallSprite::EastWest => 15,
+
+            WallSprite::East => 12 + 16,
+            WallSprite::South => 13 + 16,
+            WallSprite::West => 14 + 16,
+            WallSprite::North => 15 + 16,
+
+            WallSprite::EastSouth => 12 + 16 * 2,
+            WallSprite::WestSouth => 13 + 16 * 2,
+            WallSprite::NorthWest => 14 + 16 * 2,
+            WallSprite::NorthEast => 15 + 16 * 2,
+
+            WallSprite::NorthWestSouth => 12 + 16 * 3,
+            WallSprite::NorthEastWest => 13 + 16 * 3,
+            WallSprite::NorthEastSouth => 14 + 16 * 3,
+            WallSprite::EastWestSouth => 15 + 16 * 3,
+
+            WallSprite::Outline => 15 + 16 * 4,
         }
     }
 }
@@ -120,6 +154,7 @@ impl Plugin for GraphicsPlugin {
                 (
                     update_indexable_sprite::<CharacterSprite>,
                     update_indexable_sprite::<WallSprite>,
+                    update_wall_sprite,
                 ),
             )
             .add_systems(
@@ -172,6 +207,42 @@ fn update_indexable_sprite<T: Component + IndexableSprite>(
 ) {
     for (indexable, mut sprite) in sprites.iter_mut() {
         sprite.index = indexable.index();
+    }
+}
+
+fn update_wall_sprite(mut sprites: Query<&mut WallSprite>, grid: Res<Grid<Wall>>) {
+    for (ent, location) in grid.iter() {
+        let mut wall = sprites.get_mut(ent).expect("Wall with no sprite in grid");
+
+        let east = &(location.0 + IVec2::new(1, 0)).into();
+        let west = &(location.0 - IVec2::new(1, 0)).into();
+        let north = &(location.0 + IVec2::new(0, 1)).into();
+        let south = &(location.0 - IVec2::new(0, 1)).into();
+
+        use WallSprite::*;
+        *wall = match (
+            grid.occupied(west),
+            grid.occupied(east),
+            grid.occupied(north),
+            grid.occupied(south),
+        ) {
+            (true, true, true, true) => All,
+            (true, true, true, false) => NorthEastWest,
+            (true, true, false, true) => EastWestSouth,
+            (true, true, false, false) => EastWest,
+            (true, false, true, true) => NorthWestSouth,
+            (true, false, true, false) => NorthWest,
+            (true, false, false, true) => WestSouth,
+            (true, false, false, false) => West,
+            (false, true, true, true) => NorthEastSouth,
+            (false, true, true, false) => NorthEast,
+            (false, true, false, true) => EastSouth,
+            (false, true, false, false) => East,
+            (false, false, true, true) => NorthSouth,
+            (false, false, true, false) => North,
+            (false, false, false, true) => South,
+            (false, false, false, false) => None,
+        };
     }
 }
 

@@ -22,7 +22,7 @@ pub struct AiPath {
 
 // TODO this grid location is tied to a grid
 fn neumann_neighbors<T>(grid: &Grid<T>, location: &GridLocation) -> Vec<(GridLocation, usize)> {
-    let (x, y) = (location.x, location.y);
+    let (x, y) = (location.x as u32, location.y as u32);
 
     let mut sucessors = Vec::new();
     if let Some(left) = x.checked_sub(1) {
