@@ -23,8 +23,9 @@ fn use_grid(
 
 fn spawn_pawns(mut commands: Commands) {
     for _i in 0..100 {
+        let position = Vec2::new(GRID_SIZE as f32 / 2., GRID_SIZE as f32 / 2.);
         commands.spawn((
-            SpatialBundle::from_transform(Transform::from_xyz(10.0, 10.0, 800.0)),
+            SpatialBundle::from_transform(Transform::from_translation(position.extend(800.0))),
             CharacterSprite::default(),
             Pawn,
             LastDirection(Vec2::ZERO),
@@ -104,7 +105,9 @@ fn spawn_maze(mut commands: Commands) {
         }
     }
 
+    maze[&GridLocation::new(GRID_SIZE as u32 / 2, GRID_SIZE as u32 / 2)] = None;
     maze[&GridLocation::new(10, 10)] = None;
+    maze[&GridLocation::new(10, 9)] = None;
 
     for (_, filled) in maze.iter() {
         commands.spawn((
@@ -115,4 +118,15 @@ fn spawn_maze(mut commands: Commands) {
             filled,
         ));
     }
+
+    commands.spawn((
+        SpatialBundle::default(),
+        FoodMachine {
+            use_offset: IVec2 { x: 0, y: -1 },
+        },
+        LockToGrid,
+        MachineSprite::FoodMachine,
+        Wall { _health: 10.0 },
+        GridLocation::new(10, 10),
+    ));
 }

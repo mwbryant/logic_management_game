@@ -22,7 +22,7 @@ pub struct Recreation {
 // Could be generic needs system
 fn apply_hunger(mut hungers: Query<&mut Hunger>, time: Res<Time>) {
     for mut hunger in &mut hungers {
-        hunger.value -= time.delta_seconds() * 10.0;
+        hunger.value -= time.delta_seconds() * 5.0;
     }
 }
 

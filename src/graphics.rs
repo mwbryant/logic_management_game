@@ -123,6 +123,21 @@ impl IndexableSprite for CharacterSprite {
     }
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Component)]
+pub enum MachineSprite {
+    #[default]
+    FoodMachine,
+}
+
+impl IndexableSprite for MachineSprite {
+    type AtlasHandleWrapper = CharacterAtlas;
+    fn index(&self) -> usize {
+        match self {
+            MachineSprite::FoodMachine => 14 + 16 * 4,
+        }
+    }
+}
+
 impl WalkCycle {
     fn index(&self) -> usize {
         match self {
@@ -153,6 +168,7 @@ impl Plugin for GraphicsPlugin {
                 Update,
                 (
                     update_indexable_sprite::<CharacterSprite>,
+                    update_indexable_sprite::<MachineSprite>,
                     update_indexable_sprite::<WallSprite>,
                     update_wall_sprite,
                 ),
@@ -161,6 +177,7 @@ impl Plugin for GraphicsPlugin {
                 PreUpdate,
                 (
                     add_sprite_to_indexable::<CharacterSprite>,
+                    add_sprite_to_indexable::<MachineSprite>,
                     add_sprite_to_indexable::<WallSprite>,
                 ),
             );
@@ -212,37 +229,37 @@ fn update_indexable_sprite<T: Component + IndexableSprite>(
 
 fn update_wall_sprite(mut sprites: Query<&mut WallSprite>, grid: Res<Grid<Wall>>) {
     for (ent, location) in grid.iter() {
-        let mut wall = sprites.get_mut(ent).expect("Wall with no sprite in grid");
+        if let Ok(mut wall) = sprites.get_mut(ent) {
+            let east = &(location.0 + IVec2::new(1, 0)).into();
+            let west = &(location.0 - IVec2::new(1, 0)).into();
+            let north = &(location.0 + IVec2::new(0, 1)).into();
+            let south = &(location.0 - IVec2::new(0, 1)).into();
 
-        let east = &(location.0 + IVec2::new(1, 0)).into();
-        let west = &(location.0 - IVec2::new(1, 0)).into();
-        let north = &(location.0 + IVec2::new(0, 1)).into();
-        let south = &(location.0 - IVec2::new(0, 1)).into();
-
-        use WallSprite::*;
-        *wall = match (
-            grid.occupied(west),
-            grid.occupied(east),
-            grid.occupied(north),
-            grid.occupied(south),
-        ) {
-            (true, true, true, true) => All,
-            (true, true, true, false) => NorthEastWest,
-            (true, true, false, true) => EastWestSouth,
-            (true, true, false, false) => EastWest,
-            (true, false, true, true) => NorthWestSouth,
-            (true, false, true, false) => NorthWest,
-            (true, false, false, true) => WestSouth,
-            (true, false, false, false) => West,
-            (false, true, true, true) => NorthEastSouth,
-            (false, true, true, false) => NorthEast,
-            (false, true, false, true) => EastSouth,
-            (false, true, false, false) => East,
-            (false, false, true, true) => NorthSouth,
-            (false, false, true, false) => North,
-            (false, false, false, true) => South,
-            (false, false, false, false) => None,
-        };
+            use WallSprite::*;
+            *wall = match (
+                grid.occupied(west),
+                grid.occupied(east),
+                grid.occupied(north),
+                grid.occupied(south),
+            ) {
+                (true, true, true, true) => All,
+                (true, true, true, false) => NorthEastWest,
+                (true, true, false, true) => EastWestSouth,
+                (true, true, false, false) => EastWest,
+                (true, false, true, true) => NorthWestSouth,
+                (true, false, true, false) => NorthWest,
+                (true, false, false, true) => WestSouth,
+                (true, false, false, false) => West,
+                (false, true, true, true) => NorthEastSouth,
+                (false, true, true, false) => NorthEast,
+                (false, true, false, true) => EastSouth,
+                (false, true, false, false) => East,
+                (false, false, true, true) => NorthSouth,
+                (false, false, true, false) => North,
+                (false, false, false, true) => South,
+                (false, false, false, false) => None,
+            };
+        }
     }
 }
 

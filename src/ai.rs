@@ -5,7 +5,7 @@ pub struct AiPlugin;
 
 impl Plugin for AiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (wander, update_brains, follow_path));
+        app.add_systems(Update, (wander, update_brains, follow_path, get_food));
     }
 }
 
@@ -29,18 +29,20 @@ impl Default for BrainState {
     }
 }
 
-fn update_brains(mut brains: Query<(&mut Brain, &mut Sprite, &Hunger, &Recreation)>) {
+fn update_brains(mut brains: Query<(&mut Brain, &mut TextureAtlasSprite, &Hunger, &Recreation)>) {
     for (mut brain, mut sprite, hunger, recreation) in &mut brains {
-        if hunger.value < 0.4 {
+        if hunger.value < 40.0 {
             brain.state = BrainState::GetFood;
             sprite.color = Color::ORANGE;
             continue;
         }
+        /*
         if recreation.value < 0.4 {
             brain.state = BrainState::Relax;
             sprite.color = Color::BLUE;
             continue;
         }
+        */
 
         if !matches!(brain.state, BrainState::Wander(_)) {
             sprite.color = Color::WHITE;
@@ -49,10 +51,48 @@ fn update_brains(mut brains: Query<(&mut Brain, &mut Sprite, &Hunger, &Recreatio
     }
 }
 
+fn get_food(
+    mut commands: Commands,
+    mut brains: Query<(Entity, &mut Hunger, &AiPath, &Brain, &Transform), Without<PathfindingTask>>,
+    walls: Res<Grid<Wall>>,
+    food_grid: Res<Grid<FoodMachine>>,
+    food: Query<&FoodMachine>,
+) {
+    for (target, mut hunger, path, brain, transform) in &mut brains {
+        if matches!(brain.state, BrainState::GetFood) {
+            if let Some((food_ent, location)) = food_grid.iter().next() {
+                //TODO is there a way to not need these expects
+                let food = food.get(food_ent).expect("Bad food in grid");
+
+                let start = GridLocation::new(
+                    transform.translation.x as u32,
+                    transform.translation.y as u32,
+                );
+
+                let food_point = location.0 + food.use_offset;
+                let food_transform = Vec2::new(food_point.x as f32, food_point.y as f32);
+
+                if transform.translation.truncate().distance(food_transform) < 0.5 {
+                    info!("Eating!");
+                    hunger.value = 100.0;
+                } else if path.locations.is_empty() {
+                    info!("Getting food!");
+                    spawn_optimized_pathfinding_task(
+                        &mut commands,
+                        target,
+                        &walls,
+                        &start,
+                        &food_point.into(),
+                    );
+                }
+            }
+        }
+    }
+}
+
 fn wander(
     mut commands: Commands,
-    mut brains: Query<(Entity, &AiPath, &mut Brain, &Transform)>,
-    pathfinding_tasks: Query<&PathfindingTask>,
+    mut brains: Query<(Entity, &AiPath, &mut Brain, &Transform), Without<PathfindingTask>>,
     time: Res<Time>,
     walls: Res<Grid<Wall>>,
 ) {
@@ -71,14 +111,7 @@ fn wander(
                     transform.translation.y as u32,
                 );
                 let end = GridLocation::new(x, y);
-                spawn_optimized_pathfinding_task(
-                    &mut commands,
-                    target,
-                    &walls,
-                    &start,
-                    &end,
-                    &pathfinding_tasks,
-                );
+                spawn_optimized_pathfinding_task(&mut commands, target, &walls, &start, &end);
             }
         }
     }

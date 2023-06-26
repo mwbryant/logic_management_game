@@ -111,14 +111,7 @@ pub fn spawn_optimized_pathfinding_task<T: Component>(
     grid: &Grid<T>,
     start: &GridLocation,
     end: &GridLocation,
-    pathfinding_tasks: &Query<&PathfindingTask>,
 ) {
-    for task in pathfinding_tasks {
-        if target == task.0 {
-            // Already a task for this entity, don't spam jobs
-            return;
-        }
-    }
     // FIXME, bug where the pawn thinks it's currently 1 tile left or right and sends a request starting within a wall
     if grid.occupied(end) {
         return;
@@ -136,7 +129,9 @@ pub fn spawn_optimized_pathfinding_task<T: Component>(
         path
     });
 
-    commands.spawn(PathfindingTask(target, task));
+    commands
+        .entity(target)
+        .insert(PathfindingTask(target, task));
 }
 
 pub fn apply_pathfinding_to_ai(
@@ -146,7 +141,7 @@ pub fn apply_pathfinding_to_ai(
 ) {
     for (task_entity, mut task) in &mut tasks {
         if let Some(result) = future::block_on(future::poll_once(&mut task.1)) {
-            commands.entity(task_entity).despawn();
+            commands.entity(task_entity).remove::<PathfindingTask>();
             if let Ok(mut ai_path) = paths.get_mut(task.0) {
                 if let Ok(path) = result {
                     ai_path.locations.clear();
