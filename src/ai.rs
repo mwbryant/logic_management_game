@@ -5,7 +5,16 @@ pub struct AiPlugin;
 
 impl Plugin for AiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (wander, update_brains, follow_path, get_food));
+        app.add_systems(
+            Update,
+            (
+                wander,
+                update_brains,
+                follow_path,
+                get_food,
+                clear_path_if_dirty,
+            ),
+        );
     }
 }
 
@@ -55,37 +64,58 @@ fn get_food(
     mut commands: Commands,
     mut brains: Query<(Entity, &mut Hunger, &AiPath, &Brain, &Transform), Without<PathfindingTask>>,
     walls: Res<Grid<Wall>>,
-    food_grid: Res<Grid<FoodMachine>>,
-    food: Query<&FoodMachine>,
+    machine_grid: Res<Grid<Machine>>,
+    food: Query<&Machine, With<FoodMachine>>,
 ) {
     for (target, mut hunger, path, brain, transform) in &mut brains {
         if matches!(brain.state, BrainState::GetFood) {
-            if let Some((food_ent, location)) = food_grid.iter().next() {
-                //TODO is there a way to not need these expects
-                let food = food.get(food_ent).expect("Bad food in grid");
+            if let Some((food_ent, location)) = machine_grid.iter().next() {
+                if let Ok(food) = food.get(food_ent) {
+                    if let Some(start) = GridLocation::from_world(transform.translation.truncate())
+                    {
+                        let food_point = location.0 + food.use_offset;
+                        let food_transform = Vec2::new(food_point.x as f32, food_point.y as f32);
 
-                let start = GridLocation::new(
-                    transform.translation.x as u32,
-                    transform.translation.y as u32,
-                );
-
-                let food_point = location.0 + food.use_offset;
-                let food_transform = Vec2::new(food_point.x as f32, food_point.y as f32);
-
-                if transform.translation.truncate().distance(food_transform) < 0.5 {
-                    info!("Eating!");
-                    hunger.value = 100.0;
-                } else if path.locations.is_empty() {
-                    info!("Getting food!");
-                    spawn_optimized_pathfinding_task(
-                        &mut commands,
-                        target,
-                        &walls,
-                        &start,
-                        &food_point.into(),
-                    );
+                        if transform.translation.truncate().distance(food_transform) < 0.5 {
+                            info!("Eating!");
+                            hunger.value = 100.0;
+                        } else if path.locations.is_empty() {
+                            info!("Getting food!");
+                            spawn_optimized_pathfinding_task(
+                                &mut commands,
+                                target,
+                                &walls,
+                                &start,
+                                &food_point.into(),
+                            );
+                        }
+                    } else {
+                        warn!("Ai entity not in grid...");
+                    }
                 }
             }
+        }
+    }
+}
+
+fn clear_path_if_dirty(
+    mut commands: Commands,
+    mut dirty: EventReader<DirtyGridEvent<Wall>>,
+    mut brains: Query<&mut AiPath, Without<PathfindingTask>>,
+    mut pathfinding: Query<Entity, With<PathfindingTask>>,
+) {
+    for event in dirty.iter() {
+        for mut path in &mut brains {
+            if path
+                .locations
+                .iter()
+                .any(|position| GridLocation::from_world(*position).unwrap() == event.0)
+            {
+                path.locations.clear();
+            }
+        }
+        for entity in &mut pathfinding {
+            commands.entity(entity).remove::<PathfindingTask>();
         }
     }
 }
@@ -106,12 +136,12 @@ fn wander(
                 let x = rng.gen::<u32>() % GRID_SIZE as u32;
                 let y = rng.gen::<u32>() % GRID_SIZE as u32;
 
-                let start = GridLocation::new(
-                    transform.translation.x as u32,
-                    transform.translation.y as u32,
-                );
-                let end = GridLocation::new(x, y);
-                spawn_optimized_pathfinding_task(&mut commands, target, &walls, &start, &end);
+                if let Some(start) = GridLocation::from_world(transform.translation.truncate()) {
+                    let end = GridLocation::new(x, y);
+                    spawn_optimized_pathfinding_task(&mut commands, target, &walls, &start, &end);
+                } else {
+                    warn!("Entity not in grid");
+                }
             }
         }
     }

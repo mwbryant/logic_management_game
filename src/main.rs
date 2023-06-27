@@ -63,7 +63,10 @@ fn main() {
             BuildingPlugin,
             NeedsPlugin,
             PathfindingPlugin,
+            PlayerPlugin,
         ))
+        .init_resource::<CursorPosition>()
+        .add_systems(Update, update_cursor)
         .add_systems(Update, use_grid)
         .add_systems(Startup, (spawn_maze, spawn_pawns, spawn_outline))
         .run();
@@ -121,9 +124,10 @@ fn spawn_maze(mut commands: Commands) {
 
     commands.spawn((
         SpatialBundle::default(),
-        FoodMachine {
+        Machine {
             use_offset: IVec2 { x: 0, y: -1 },
         },
+        FoodMachine,
         LockToGrid,
         MachineSprite::FoodMachine,
         Wall { _health: 10.0 },

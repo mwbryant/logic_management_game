@@ -47,6 +47,15 @@ impl GridLocation {
     pub fn new(x: u32, y: u32) -> Self {
         GridLocation(IVec2::new(x as i32, y as i32))
     }
+    pub fn from_world(position: Vec2) -> Option<Self> {
+        let position = position + Vec2::splat(0.5);
+        let location = GridLocation(IVec2::new(position.x as i32, position.y as i32));
+        if Grid::<()>::valid_index(&location) {
+            Some(location)
+        } else {
+            None
+        }
+    }
 }
 
 impl From<IVec2> for GridLocation {
@@ -93,17 +102,20 @@ impl<T> Default for Grid<T> {
     }
 }
 
-fn remove_from_grid<T: Component>(mut grid: ResMut<Grid<T>>, mut query: RemovedComponents<T>) {
+fn remove_from_grid<T: Component>(
+    mut grid: ResMut<Grid<T>>,
+    mut query: RemovedComponents<T>,
+    mut dirty: EventWriter<DirtyGridEvent<T>>,
+) {
     for removed_entity in query.iter() {
         // Search for entity
-        if let Some(entity) = grid
-            .entities
-            .iter_mut()
-            .flatten()
-            .filter(|entity| entity.is_some())
-            .find(|entity| entity.unwrap() == removed_entity)
-        {
-            *entity = None;
+        let removed = grid.iter().find(|(entity, _)| *entity == removed_entity);
+        if let Some((_, location)) = removed {
+            dirty.send(DirtyGridEvent::<T>(
+                location.clone(),
+                PhantomData::default(),
+            ));
+            grid[&location] = None;
         }
     }
 }
@@ -111,18 +123,30 @@ fn remove_from_grid<T: Component>(mut grid: ResMut<Grid<T>>, mut query: RemovedC
 fn add_to_grid<T: Component>(
     mut grid: ResMut<Grid<T>>,
     query: Query<(Entity, &GridLocation), Added<T>>,
+    mut dirty: EventWriter<DirtyGridEvent<T>>,
 ) {
     for (entity, location) in &query {
         if let Some(existing) = grid[location] {
             if existing != entity {
                 warn!("Over-writing entity in grid");
+                dirty.send(DirtyGridEvent::<T>(
+                    location.clone(),
+                    PhantomData::default(),
+                ));
                 grid[location] = Some(entity);
             }
         } else {
+            dirty.send(DirtyGridEvent::<T>(
+                location.clone(),
+                PhantomData::default(),
+            ));
             grid[location] = Some(entity);
         }
     }
 }
+
+#[derive(Event)]
+pub struct DirtyGridEvent<T>(pub GridLocation, PhantomData<T>);
 
 #[derive(Default)]
 pub struct GridPlugin<T> {
@@ -133,6 +157,7 @@ impl<T: Component> Plugin for GridPlugin<T> {
     fn build(&self, app: &mut App) {
         app.init_resource::<Grid<T>>()
             .add_systems(Update, lock_to_grid::<T>)
+            .add_event::<DirtyGridEvent<T>>()
             // TODO move_on_grid
             .add_systems(PreUpdate, (add_to_grid::<T>, remove_from_grid::<T>));
     }

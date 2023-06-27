@@ -6,7 +6,7 @@ impl Plugin for BuildingPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((
             GridPlugin::<Wall>::default(),
-            GridPlugin::<FoodMachine>::default(),
+            GridPlugin::<Machine>::default(),
         ));
     }
 }
@@ -18,6 +18,9 @@ pub struct Wall {
 }
 
 #[derive(Component, Default, Debug)]
-pub struct FoodMachine {
+pub struct Machine {
     pub use_offset: IVec2,
 }
+
+#[derive(Component, Default, Debug)]
+pub struct FoodMachine;

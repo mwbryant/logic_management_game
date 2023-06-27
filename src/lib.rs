@@ -7,6 +7,8 @@ mod graphics;
 mod grid;
 mod needs;
 mod pathfinding;
+mod player;
+mod utils;
 
 pub mod prelude {
     pub use bevy::reflect::TypeUuid;
@@ -20,4 +22,6 @@ pub mod prelude {
     pub use crate::grid::*;
     pub use crate::needs::*;
     pub use crate::pathfinding::*;
+    pub use crate::player::*;
+    pub use crate::utils::*;
 }
