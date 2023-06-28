@@ -39,7 +39,7 @@ impl Default for BrainState {
 }
 
 fn update_brains(mut brains: Query<(&mut Brain, &mut TextureAtlasSprite, &Hunger, &Recreation)>) {
-    for (mut brain, mut sprite, hunger, recreation) in &mut brains {
+    for (mut brain, mut sprite, hunger, _recreation) in &mut brains {
         if hunger.value < 40.0 {
             brain.state = BrainState::GetFood;
             sprite.color = Color::ORANGE;
@@ -68,32 +68,47 @@ fn get_food(
     food: Query<&Machine, With<FoodMachine>>,
 ) {
     for (target, mut hunger, path, brain, transform) in &mut brains {
-        if matches!(brain.state, BrainState::GetFood) {
-            if let Some((food_ent, location)) = machine_grid.iter().next() {
-                if let Ok(food) = food.get(food_ent) {
-                    if let Some(start) = GridLocation::from_world(transform.translation.truncate())
-                    {
-                        let food_point = location.0 + food.use_offset;
-                        let food_transform = Vec2::new(food_point.x as f32, food_point.y as f32);
+        if !matches!(brain.state, BrainState::GetFood) {
+            continue;
+        }
 
-                        if transform.translation.truncate().distance(food_transform) < 0.5 {
-                            info!("Eating!");
-                            hunger.value = 100.0;
-                        } else if path.locations.is_empty() {
-                            info!("Getting food!");
-                            spawn_optimized_pathfinding_task(
-                                &mut commands,
-                                target,
-                                &walls,
-                                &start,
-                                &food_point.into(),
-                            );
-                        }
-                    } else {
-                        warn!("Ai entity not in grid...");
-                    }
-                }
+        //FIXME should find closest machine, or better one that can be path found to
+        let (food, location) = match machine_grid
+            .iter()
+            .filter(|(ent, _)| food.get(*ent).is_ok())
+            .map(|(ent, location)| (food.get(ent).unwrap(), location))
+            .next()
+        {
+            Some(val) => val,
+            None => continue,
+        };
+
+        let start = match GridLocation::from_world(transform.translation.truncate()) {
+            Some(val) => val,
+            None => {
+                warn!("AI entity not in grid...");
+                continue;
             }
+        };
+
+        let target_point = location.0 + food.use_offset;
+        let food_transform = Vec2::new(target_point.x as f32, target_point.y as f32);
+
+        if transform.translation.truncate().distance(food_transform) < 0.5 {
+            info!("Eating!");
+            hunger.value = 100.0;
+            continue;
+        }
+
+        if path.locations.is_empty() {
+            info!("Getting food!");
+            spawn_optimized_pathfinding_task(
+                &mut commands,
+                target,
+                &walls,
+                &start,
+                &target_point.into(),
+            );
         }
     }
 }
