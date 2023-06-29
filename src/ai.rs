@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use bevy::utils::FloatOrd;
 use rand::prelude::*;
 
 pub struct AiPlugin;
@@ -13,6 +14,7 @@ impl Plugin for AiPlugin {
                 follow_path,
                 get_food,
                 clear_path_if_dirty,
+                operate_food_machine,
             ),
         );
     }
@@ -29,6 +31,7 @@ pub struct Brain {
 pub enum BrainState {
     Wander(f32),
     GetFood,
+    OperateMachine(Entity),
     Relax,
 }
 
@@ -40,6 +43,12 @@ impl Default for BrainState {
 
 fn update_brains(mut brains: Query<(&mut Brain, &mut TextureAtlasSprite, &Hunger, &Recreation)>) {
     for (mut brain, mut sprite, hunger, _recreation) in &mut brains {
+        sprite.color = Color::WHITE;
+        if matches!(brain.state, BrainState::OperateMachine(_)) {
+            sprite.color = Color::GREEN;
+            continue;
+        }
+
         if hunger.value < 40.0 {
             brain.state = BrainState::GetFood;
             sprite.color = Color::ORANGE;
@@ -60,25 +69,59 @@ fn update_brains(mut brains: Query<(&mut Brain, &mut TextureAtlasSprite, &Hunger
     }
 }
 
+fn operate_food_machine(
+    mut brains: Query<(&mut Brain, &mut Hunger), Without<PathfindingTask>>,
+    foods: Query<&FoodMachine>,
+    time: Res<Time>,
+) {
+    for (mut brain, mut hunger) in &mut brains {
+        let machine = match &brain.state {
+            BrainState::OperateMachine(val) => val,
+            _ => continue,
+        };
+
+        let food = match foods.get(*machine) {
+            Ok(food) => food,
+            Err(_) => {
+                warn!("No machine for me to operate :(");
+                brain.state = BrainState::default();
+                continue;
+            }
+        };
+
+        hunger.value += food.rate * time.delta_seconds();
+        if hunger.value >= 100.0 {
+            brain.state = BrainState::default();
+        }
+    }
+}
+
 fn get_food(
     mut commands: Commands,
-    mut brains: Query<(Entity, &mut Hunger, &AiPath, &Brain, &Transform), Without<PathfindingTask>>,
+    mut brains: Query<(Entity, &AiPath, &mut Brain, &Transform), Without<PathfindingTask>>,
     walls: Res<Grid<Wall>>,
     machine_grid: Res<Grid<Machine>>,
     food: Query<&Machine, With<FoodMachine>>,
 ) {
-    for (target, mut hunger, path, brain, transform) in &mut brains {
+    for (target, path, mut brain, transform) in &mut brains {
         if !matches!(brain.state, BrainState::GetFood) {
             continue;
         }
 
         //FIXME should find closest machine, or better one that can be path found to
-        let (food, location) = match machine_grid
+        let (machine_entity, food, location) = match machine_grid
             .iter()
             .filter(|(ent, _)| food.get(*ent).is_ok())
-            .map(|(ent, location)| (food.get(ent).unwrap(), location))
-            .next()
-        {
+            .map(|(ent, location)| (ent, food.get(ent).unwrap(), location))
+            .min_by_key(|(_, machine, location)| {
+                //TODO also check if reachable by connected component
+                FloatOrd(
+                    transform
+                        .translation
+                        .truncate()
+                        .distance((location.0 + machine.use_offset).as_vec2()),
+                )
+            }) {
             Some(val) => val,
             None => continue,
         };
@@ -92,23 +135,25 @@ fn get_food(
         };
 
         let target_point = location.0 + food.use_offset;
-        let food_transform = Vec2::new(target_point.x as f32, target_point.y as f32);
-
-        if transform.translation.truncate().distance(food_transform) < 0.5 {
-            info!("Eating!");
-            hunger.value = 100.0;
-            continue;
-        }
 
         if path.locations.is_empty() {
-            info!("Getting food!");
-            spawn_optimized_pathfinding_task(
-                &mut commands,
-                target,
-                &walls,
-                &start,
-                &target_point.into(),
-            );
+            if transform
+                .translation
+                .truncate()
+                .distance(target_point.as_vec2())
+                < 0.5
+            {
+                brain.state = BrainState::OperateMachine(machine_entity);
+                continue;
+            } else {
+                spawn_optimized_pathfinding_task(
+                    &mut commands,
+                    target,
+                    &walls,
+                    &start,
+                    &target_point.into(),
+                );
+            }
         }
     }
 }

@@ -23,4 +23,6 @@ pub struct Machine {
 }
 
 #[derive(Component, Default, Debug)]
-pub struct FoodMachine;
+pub struct FoodMachine {
+    pub rate: f32,
+}

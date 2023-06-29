@@ -127,7 +127,7 @@ fn spawn_maze(mut commands: Commands) {
         Machine {
             use_offset: IVec2 { x: 0, y: -1 },
         },
-        FoodMachine,
+        FoodMachine { rate: 10.0 },
         LockToGrid,
         MachineSprite::FoodMachine,
         Wall { _health: 10.0 },
