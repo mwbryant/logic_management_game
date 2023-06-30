@@ -1,6 +1,7 @@
 #![allow(clippy::type_complexity)]
 mod ai;
 mod animation;
+mod app;
 mod buildings;
 mod camera;
 mod graphics;
@@ -16,6 +17,7 @@ pub mod prelude {
 
     pub use crate::ai::*;
     pub use crate::animation::*;
+    pub use crate::app::*;
     pub use crate::buildings::*;
     pub use crate::camera::*;
     pub use crate::graphics::*;

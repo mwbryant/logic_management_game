@@ -1,5 +1,5 @@
-use bevy::window::PresentMode;
-use logic_management_tutorial::prelude::*;
+use crate::prelude::*;
+use bevy::window::{PresentMode, WindowMode};
 use rand::Rng;
 
 pub const WIDTH: f32 = 1920.0;
@@ -38,38 +38,44 @@ fn spawn_pawns(mut commands: Commands) {
     }
 }
 
-fn main() {
-    App::new()
-        .add_plugins(
-            DefaultPlugins
-                .set(ImagePlugin::default_nearest())
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        present_mode: PresentMode::Immediate,
-                        title: "Logic Management Game".into(),
-                        resolution: (WIDTH, HEIGHT).into(),
-                        resizable: true,
-                        ..default()
-                    }),
+#[bevy_main]
+pub fn main() {
+    let mut app = App::new();
+    app.add_plugins(
+        DefaultPlugins
+            .set(ImagePlugin::default_nearest())
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    //present_mode: PresentMode::Immediate,
+                    title: "Logic Management Game".into(),
+                    resolution: (WIDTH, HEIGHT).into(),
+                    resizable: false,
+                    mode: WindowMode::BorderlessFullscreen,
                     ..default()
-                })
-                .build(),
-        )
-        .add_plugins((
-            GraphicsPlugin,
-            AiPlugin,
-            SimpleCameraPlugin,
-            FrameAnimationPlugin,
-            BuildingPlugin,
-            NeedsPlugin,
-            PathfindingPlugin,
-            PlayerPlugin,
-        ))
-        .init_resource::<CursorPosition>()
-        .add_systems(Update, update_cursor)
-        .add_systems(Update, use_grid)
-        .add_systems(Startup, (spawn_maze, spawn_pawns, spawn_outline))
-        .run();
+                }),
+                ..default()
+            })
+            .build(),
+    )
+    .add_plugins((
+        GraphicsPlugin,
+        AiPlugin,
+        SimpleCameraPlugin,
+        FrameAnimationPlugin,
+        BuildingPlugin,
+        NeedsPlugin,
+        PathfindingPlugin,
+        PlayerPlugin,
+    ))
+    .init_resource::<CursorPosition>()
+    .add_systems(Update, update_cursor)
+    .add_systems(Update, use_grid)
+    .add_systems(Startup, (spawn_maze, spawn_pawns, spawn_outline));
+
+    #[cfg(target_os = "android")]
+    app.insert_resource(Msaa::Off);
+
+    app.run();
 }
 
 fn spawn_outline(mut commands: Commands) {

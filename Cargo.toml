@@ -4,6 +4,15 @@ version = "0.1.0"
 edition = "2021"
 # default-run = "main"
 
+# Android build cmd: cargo apk run --release --lib -p logic_management_tutorial
+
+# TODO figure out the correct setup here, why does the bevy android example use this approach
+# [lib]
+# crate-type = ["staticlib", "cdylib"]
+
+[[bin]]
+name = "main"
+
 [profile.dev]
 opt-level = 1
 
@@ -43,3 +52,21 @@ rand = "0.8.5"
 pathfinding = "4.3.0"
 futures-lite = "*"
 num = "*"
+
+[package.metadata.android]
+package = "org.bevyengine.example"
+apk_name = "bevyexample"
+assets = "assets"
+resources = "assets/android-res"
+build_targets = ["aarch64-linux-android"]
+
+[package.metadata.android.sdk]
+target_sdk_version = 31
+
+[package.metadata.android.application]
+icon = "@mipmap/ic_launcher"
+label = "Bevy Example"
+
+[package.metadata.android.signing.release]
+path = "/home/matthew/Tools/android/cmdline-tools/bin/my-release-key.keystore"
+keystore_password = "android"
