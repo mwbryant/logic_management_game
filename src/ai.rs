@@ -150,8 +150,8 @@ fn get_food(
                     &mut commands,
                     target,
                     &walls,
-                    &start,
-                    &target_point.into(),
+                    start,
+                    target_point.into(),
                 );
             }
         }
@@ -198,7 +198,7 @@ fn wander(
 
                 if let Some(start) = GridLocation::from_world(transform.translation.truncate()) {
                     let end = GridLocation::new(x, y);
-                    spawn_optimized_pathfinding_task(&mut commands, target, &walls, &start, &end);
+                    spawn_optimized_pathfinding_task(&mut commands, target, &walls, start, end);
                 } else {
                     warn!("Entity not in grid");
                 }

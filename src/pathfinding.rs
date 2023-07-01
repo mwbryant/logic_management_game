@@ -20,7 +20,6 @@ pub struct AiPath {
     pub locations: VecDeque<Vec2>,
 }
 
-// TODO this grid location is tied to a grid
 fn neumann_neighbors<T>(grid: &Grid<T>, location: &GridLocation) -> Vec<(GridLocation, usize)> {
     let (x, y) = (location.x as u32, location.y as u32);
 
@@ -103,23 +102,23 @@ impl<T> Grid<T> {
 }
 
 #[derive(Component)]
-pub struct PathfindingTask(pub Entity, Task<Result<Path, PathfindingError>>);
+pub struct PathfindingTask(Task<Result<Path, PathfindingError>>);
 
 pub fn spawn_optimized_pathfinding_task<T: Component>(
     commands: &mut Commands,
     target: Entity,
     grid: &Grid<T>,
-    start: &GridLocation,
-    end: &GridLocation,
+    start: GridLocation,
+    end: GridLocation,
 ) {
-    // FIXME, bug where the pawn thinks it's currently 1 tile left or right and sends a request starting within a wall
-    if grid.occupied(end) {
+    // Fail early if end is not valid
+    if grid.occupied(&end) {
         return;
     }
+
     let thread_pool = AsyncComputeTaskPool::get();
+
     // Must clone because the grid can change between frames
-    let start = start.clone();
-    let end = end.clone();
     // Must box to prevent stack overflows on very large grids
     let grid = Box::new(grid.clone());
 
@@ -129,9 +128,7 @@ pub fn spawn_optimized_pathfinding_task<T: Component>(
         path
     });
 
-    commands
-        .entity(target)
-        .insert(PathfindingTask(target, task));
+    commands.entity(target).insert(PathfindingTask(task));
 }
 
 pub fn apply_pathfinding_to_ai(
@@ -140,9 +137,10 @@ pub fn apply_pathfinding_to_ai(
     mut tasks: Query<(Entity, &mut PathfindingTask)>,
 ) {
     for (task_entity, mut task) in &mut tasks {
-        if let Some(result) = future::block_on(future::poll_once(&mut task.1)) {
+        if let Some(result) = future::block_on(future::poll_once(&mut task.0)) {
             commands.entity(task_entity).remove::<PathfindingTask>();
-            if let Ok(mut ai_path) = paths.get_mut(task.0) {
+
+            if let Ok(mut ai_path) = paths.get_mut(task_entity) {
                 if let Ok(path) = result {
                     ai_path.locations.clear();
                     for location in path.steps.iter() {

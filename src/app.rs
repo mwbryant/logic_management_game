@@ -22,7 +22,7 @@ fn use_grid(
 }
 
 fn spawn_pawns(mut commands: Commands) {
-    for _i in 0..100 {
+    for _i in 0..10 {
         let position = Vec2::new(GRID_SIZE as f32 / 2., GRID_SIZE as f32 / 2.);
         commands.spawn((
             SpatialBundle::from_transform(Transform::from_translation(position.extend(800.0))),

@@ -7,7 +7,6 @@ use bevy::prelude::*;
 
 pub const GRID_SIZE: usize = 20;
 
-// TODO impl iterator
 #[derive(Resource)]
 pub struct Grid<T> {
     pub entities: [[Option<Entity>; GRID_SIZE]; GRID_SIZE],

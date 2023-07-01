@@ -7,11 +7,11 @@ edition = "2021"
 # Android build cmd: cargo apk run --release --lib -p logic_management_tutorial
 
 # TODO figure out the correct setup here, why does the bevy android example use this approach
-# [lib]
-# crate-type = ["staticlib", "cdylib"]
+ # [lib]
+ # crate-type = ["staticlib", "cdylib"]
 
-[[bin]]
-name = "main"
+# [[bin]]
+# name = "main"
 
 [profile.dev]
 opt-level = 1
@@ -54,10 +54,10 @@ futures-lite = "*"
 num = "*"
 
 [package.metadata.android]
-package = "org.bevyengine.example"
-apk_name = "bevyexample"
+apk_name = "management game"
+app_name = "management game"
 assets = "assets"
-resources = "assets/android-res"
+resources = ["assets/android-res"]
 build_targets = ["aarch64-linux-android"]
 
 [package.metadata.android.sdk]
