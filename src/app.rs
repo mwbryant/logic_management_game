@@ -50,7 +50,7 @@ pub fn main() {
                     title: "Logic Management Game".into(),
                     resolution: (WIDTH, HEIGHT).into(),
                     resizable: false,
-                    mode: WindowMode::BorderlessFullscreen,
+                    //mode: WindowMode::BorderlessFullscreen,
                     ..default()
                 }),
                 ..default()
@@ -70,7 +70,7 @@ pub fn main() {
     .init_resource::<CursorPosition>()
     .add_systems(Update, update_cursor)
     .add_systems(Update, use_grid)
-    .add_systems(Startup, (spawn_maze, spawn_pawns, spawn_outline));
+    .add_systems(Startup, (spawn_pawns, spawn_outline));
 
     #[cfg(target_os = "android")]
     app.insert_resource(Msaa::Off);
@@ -101,6 +101,7 @@ pub enum MazeTile {
     Open(usize),
 }
 
+#[allow(dead_code)]
 fn spawn_maze(mut commands: Commands) {
     let mut maze = Grid::<MazeTile>::default();
     let mut rng = rand::thread_rng();

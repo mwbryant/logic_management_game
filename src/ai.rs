@@ -185,6 +185,7 @@ fn wander(
     mut brains: Query<(Entity, &AiPath, &mut Brain, &Transform), Without<PathfindingTask>>,
     time: Res<Time>,
     walls: Res<Grid<Wall>>,
+    wall_connected: Res<ConnectedComponents<Wall>>,
 ) {
     for (target, path, mut brain, transform) in &mut brains {
         if let BrainState::Wander(last_wander_time) = &mut brain.state {
@@ -193,12 +194,35 @@ fn wander(
                 *last_wander_time = 0.0;
 
                 let mut rng = rand::thread_rng();
-                let x = rng.gen::<u32>() % GRID_SIZE as u32;
-                let y = rng.gen::<u32>() % GRID_SIZE as u32;
 
                 if let Some(start) = GridLocation::from_world(transform.translation.truncate()) {
-                    let end = GridLocation::new(x, y);
-                    spawn_optimized_pathfinding_task(&mut commands, target, &walls, start, end);
+                    // Find the component that contains the entity
+                    // if none then entity probably in wall
+                    let component = wall_connected
+                        .components
+                        .iter()
+                        .find(|component| component.contains(&start));
+
+                    let end = match component {
+                        Some(component) => {
+                            // Choose a random GridLocation from the component
+                            component.iter().choose(&mut rng)
+                        }
+                        // entity in wall
+                        None => None,
+                    };
+
+                    if let Some(end) = end {
+                        spawn_optimized_pathfinding_task(
+                            &mut commands,
+                            target,
+                            &walls,
+                            start,
+                            end.clone(),
+                        );
+                    } else {
+                        warn!("I'm in a wall!");
+                    }
                 } else {
                     warn!("Entity not in grid");
                 }

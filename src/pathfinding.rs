@@ -20,34 +20,34 @@ pub struct AiPath {
     pub locations: VecDeque<Vec2>,
 }
 
-fn neumann_neighbors<T>(grid: &Grid<T>, location: &GridLocation) -> Vec<(GridLocation, usize)> {
+pub fn neumann_neighbors<T>(grid: &Grid<T>, location: &GridLocation) -> Vec<GridLocation> {
     let (x, y) = (location.x as u32, location.y as u32);
 
     let mut sucessors = Vec::new();
     if let Some(left) = x.checked_sub(1) {
         let location = GridLocation::new(left, y);
         if !grid.occupied(&location) {
-            sucessors.push((location, 1));
+            sucessors.push(location);
         }
     }
     if let Some(down) = y.checked_sub(1) {
         let location = GridLocation::new(x, down);
         if !grid.occupied(&location) {
-            sucessors.push((location, 1));
+            sucessors.push(location);
         }
     }
     if x + 1 < GRID_SIZE as u32 {
         let right = x + 1;
         let location = GridLocation::new(right, y);
         if !grid.occupied(&location) {
-            sucessors.push((location, 1));
+            sucessors.push(location);
         }
     }
     if y + 1 < GRID_SIZE as u32 {
         let up = y + 1;
         let location = GridLocation::new(x, up);
         if !grid.occupied(&location) {
-            sucessors.push((location, 1));
+            sucessors.push(location);
         }
     }
     sucessors
@@ -88,7 +88,12 @@ impl<T> Grid<T> {
     ) -> Result<Path, PathfindingError> {
         let result = astar(
             start,
-            |p| neumann_neighbors(self, p),
+            |p| {
+                neumann_neighbors(self, p)
+                    .iter()
+                    .map(|neighbor| (neighbor.clone(), 1))
+                    .collect::<Vec<_>>()
+            },
             |p| p.distance(goal) / 3,
             |p| p == goal,
         );

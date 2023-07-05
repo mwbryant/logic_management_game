@@ -1,16 +1,39 @@
 use std::{
+    collections::HashSet,
     marker::PhantomData,
-    ops::{Index, IndexMut},
+    ops::{Deref, Index, IndexMut},
 };
 
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    tasks::{AsyncComputeTaskPool, Task},
+};
+use futures_lite::future;
+use pathfinding::undirected::connected_components;
 
-pub const GRID_SIZE: usize = 20;
+use crate::prelude::neumann_neighbors;
+
+pub const GRID_SIZE: usize = 200;
 
 #[derive(Resource)]
 pub struct Grid<T> {
     pub entities: [[Option<Entity>; GRID_SIZE]; GRID_SIZE],
     _marker: PhantomData<T>,
+}
+
+#[derive(Resource)]
+pub struct ConnectedComponents<T> {
+    pub components: Vec<HashSet<GridLocation>>,
+    _marker: PhantomData<T>,
+}
+
+impl<T> Default for ConnectedComponents<T> {
+    fn default() -> Self {
+        Self {
+            components: Default::default(),
+            _marker: Default::default(),
+        }
+    }
 }
 
 impl<T> Clone for Grid<T> {
@@ -155,10 +178,21 @@ pub struct GridPlugin<T> {
 impl<T: Component> Plugin for GridPlugin<T> {
     fn build(&self, app: &mut App) {
         app.init_resource::<Grid<T>>()
-            .add_systems(Update, lock_to_grid::<T>)
+            .init_resource::<ConnectedComponents<T>>()
+            .add_systems(
+                Update,
+                (lock_to_grid::<T>, update_connected_components::<T>),
+            )
             .add_event::<DirtyGridEvent<T>>()
             // TODO move_on_grid
-            .add_systems(PreUpdate, (add_to_grid::<T>, remove_from_grid::<T>));
+            .add_systems(
+                PreUpdate,
+                (
+                    add_to_grid::<T>,
+                    remove_from_grid::<T>,
+                    resolve_connected_components::<T>,
+                ),
+            );
     }
 }
 
@@ -173,4 +207,70 @@ fn lock_to_grid<T: Component>(
             position.translation.y = location.y as f32;
         }
     }
+}
+
+#[derive(Component)]
+pub struct ConnectedTask<T> {
+    task: Task<ConnectedComponents<T>>,
+}
+
+fn resolve_connected_components<T: Component>(
+    mut commands: Commands,
+    mut connected: ResMut<ConnectedComponents<T>>,
+    // Should maybe be a resource?
+    mut tasks: Query<(Entity, &mut ConnectedTask<T>)>,
+) {
+    for (task_entity, mut task) in &mut tasks {
+        //TODO is there a way to make bevy auto remove these or not panic or something
+        commands.entity(task_entity).despawn_recursive();
+        if let Some(result) = future::block_on(future::poll_once(&mut task.task)) {
+            *connected = result;
+            info!("{:?}", connected.components.len());
+        }
+    }
+}
+
+fn update_connected_components<T: Component>(
+    mut commands: Commands,
+    grid: Res<Grid<T>>,
+    //mut connected: ResMut<ConnectedComponents<T>>,
+    mut events: EventReader<DirtyGridEvent<T>>,
+    // Should maybe be a resource?
+    current_tasks: Query<Entity, With<ConnectedTask<T>>>,
+) {
+    if !events.is_empty() {
+        events.clear();
+        for task in &current_tasks {
+            commands.entity(task).despawn_recursive();
+        }
+        //TODO optimize heavily or throw into a task, I think I'm using this function wrong but it gives valid output so pbbft
+
+        let thread_pool = AsyncComputeTaskPool::get();
+
+        // Must clone because the grid can change between frames
+        // Must box to prevent stack overflows on very large grids
+        let grid = Box::new(grid.clone());
+
+        let task = thread_pool.spawn(async move {
+            let starts = all_points()
+                .into_iter()
+                .filter(|point| !grid.occupied(point))
+                .collect::<Vec<_>>();
+
+            ConnectedComponents::<T> {
+                components: connected_components::connected_components(&starts, |p| {
+                    neumann_neighbors(&grid, p)
+                }),
+                ..default()
+            }
+        });
+
+        commands.spawn(ConnectedTask { task });
+    }
+}
+
+fn all_points() -> Vec<GridLocation> {
+    (0..GRID_SIZE)
+        .flat_map(|x| (0..GRID_SIZE).map(move |y| GridLocation::new(x as u32, y as u32)))
+        .collect()
 }
