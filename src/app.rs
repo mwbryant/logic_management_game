@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use bevy::window::{PresentMode, WindowMode};
 use rand::Rng;
 
 pub const WIDTH: f32 = 1920.0;

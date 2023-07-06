@@ -1,6 +1,5 @@
 use crate::prelude::*;
 use bevy::utils::FloatOrd;
-use rand::prelude::*;
 
 pub struct AiPlugin;
 
@@ -196,23 +195,9 @@ fn wander(
                 let mut rng = rand::thread_rng();
 
                 if let Some(start) = GridLocation::from_world(transform.translation.truncate()) {
-                    // Find the component that contains the entity
-                    // if none then entity probably in wall
-                    let component = wall_connected
-                        .components
-                        .iter()
-                        .find(|component| component.contains(&start));
-
-                    let end = match component {
-                        Some(component) => {
-                            // Choose a random GridLocation from the component
-                            component.iter().choose(&mut rng)
-                        }
-                        // entity in wall
-                        None => None,
-                    };
-
-                    if let Some(end) = end {
+                    if let Some(end) =
+                        wall_connected.random_point_in_same_component(&start, &mut rng)
+                    {
                         spawn_optimized_pathfinding_task(
                             &mut commands,
                             target,
