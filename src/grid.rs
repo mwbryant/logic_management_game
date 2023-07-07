@@ -287,6 +287,10 @@ impl<T> ConnectedComponents<T> {
             .find(|component| component.contains(start))
     }
 
+    pub fn in_same_component(&self, start: &GridLocation, end: &GridLocation) -> bool {
+        self.point_to_component(start) == self.point_to_component(end)
+    }
+
     pub fn random_point_in_same_component<R>(
         &self,
         start: &GridLocation,

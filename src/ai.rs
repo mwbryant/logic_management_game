@@ -100,6 +100,7 @@ fn get_food(
     mut brains: Query<(Entity, &AiPath, &mut Brain, &Transform), Without<PathfindingTask>>,
     walls: Res<Grid<Wall>>,
     machine_grid: Res<Grid<Machine>>,
+    components: Res<ConnectedComponents<Wall>>,
     food: Query<&Machine, With<FoodMachine>>,
 ) {
     for (target, path, mut brain, transform) in &mut brains {
@@ -107,25 +108,7 @@ fn get_food(
             continue;
         }
 
-        //FIXME should find closest machine, or better one that can be path found to
-        let (machine_entity, food, location) = match machine_grid
-            .iter()
-            .filter(|(ent, _)| food.get(*ent).is_ok())
-            .map(|(ent, location)| (ent, food.get(ent).unwrap(), location))
-            .min_by_key(|(_, machine, location)| {
-                //TODO also check if reachable by connected component
-                FloatOrd(
-                    transform
-                        .translation
-                        .truncate()
-                        .distance((location.0 + machine.use_offset).as_vec2()),
-                )
-            }) {
-            Some(val) => val,
-            None => continue,
-        };
-
-        let start = match GridLocation::from_world(transform.translation.truncate()) {
+        let brain_location = match GridLocation::from_world(transform.translation.truncate()) {
             Some(val) => val,
             None => {
                 warn!("AI entity not in grid...");
@@ -133,7 +116,29 @@ fn get_food(
             }
         };
 
-        let target_point = location.0 + food.use_offset;
+        //FIXME should find closest machine, or better one that can be path found to
+        let (machine_entity, target_point) = match machine_grid
+            .iter()
+            .filter(|(ent, _)| food.get(*ent).is_ok())
+            .map(|(ent, location)| (ent, food.get(ent).unwrap(), location))
+            .map(|(ent, machine, location)| {
+                (ent, GridLocation::from(location.0 + machine.use_offset))
+            })
+            .filter(|(_ent, location)| components.in_same_component(location, &brain_location))
+            .min_by_key(|(_, location)| {
+                FloatOrd(
+                    transform
+                        .translation
+                        .truncate()
+                        .distance((location.0).as_vec2()),
+                )
+            }) {
+            Some(val) => val,
+            None => {
+                warn!("No food machines");
+                continue;
+            }
+        };
 
         if path.locations.is_empty() {
             if transform
@@ -149,8 +154,8 @@ fn get_food(
                     &mut commands,
                     target,
                     &walls,
-                    start,
-                    target_point.into(),
+                    brain_location,
+                    target_point,
                 );
             }
         }
