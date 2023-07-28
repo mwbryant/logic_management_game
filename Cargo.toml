@@ -47,7 +47,7 @@ default = [
 ]
 
 [dependencies]
-bevy = { git = "https://github.com/bevyengine/bevy" , default-features = false }
+bevy = { version = "0.11", default-features = false }
 rand = "0.8.5"
 pathfinding = "4.3.0"
 futures-lite = "*"

@@ -1,8 +1,13 @@
 use crate::prelude::*;
+use bevy::render::{
+    render_resource::SpecializedRenderPipelines, renderer::RenderDevice, RenderApp,
+};
 use rand::Rng;
 
 pub const WIDTH: f32 = 1920.0;
 pub const HEIGHT: f32 = 1080.0;
+
+fn save_game(entities: Query<EntityRef>) {}
 
 fn use_grid(
     grid: Res<Grid<Wall>>,
